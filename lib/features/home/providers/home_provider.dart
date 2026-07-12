@@ -2,115 +2,121 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/daily_challenge.dart';
 import '../../../shared/models/game_info.dart';
+import '../../../shared/models/game_card_data.dart';
 import '../../../shared/providers/repository_providers.dart';
 
-/// A wrapper to easily pair a game with its active challenge in the UI
 class HomeDailyChallenge {
-  final GameInfo game;
+  final String gameName;
+  final String gameId;
   final DailyChallenge challenge;
 
   const HomeDailyChallenge({
-    required this.game,
+    required this.gameName,
+    required this.gameId,
     required this.challenge,
   });
 }
 
-/// The unified state object that holds everything the Home screen needs
 class HomeState {
-  final List<GameInfo> featuredGames;
-  final GameInfo? continuePlaying;
-  final HomeDailyChallenge? dailyChallenge;
-  final List<GameInfo> recentGames;
+  final String greeting;
   final int overallXP;
   final int overallLevel;
   final int totalGamesPlayed;
+  final HomeDailyChallenge? dailyChallenge;
+  final GameCardData? continuePlaying;
+  final List<GameCardData> recentGames;
+  final List<GameCardData> allGames;
 
   const HomeState({
-    this.featuredGames = const [],
-    this.continuePlaying,
-    this.dailyChallenge,
-    this.recentGames = const [],
+    this.greeting = '',
     this.overallXP = 0,
     this.overallLevel = 1,
     this.totalGamesPlayed = 0,
+    this.dailyChallenge,
+    this.continuePlaying,
+    this.recentGames = const [],
+    this.allGames = const [],
   });
-
-  HomeState copyWith({
-    List<GameInfo>? featuredGames,
-    GameInfo? continuePlaying,
-    HomeDailyChallenge? dailyChallenge,
-    List<GameInfo>? recentGames,
-    int? overallXP,
-    int? overallLevel,
-    int? totalGamesPlayed,
-  }) {
-    return HomeState(
-      featuredGames: featuredGames ?? this.featuredGames,
-      continuePlaying: continuePlaying ?? this.continuePlaying,
-      dailyChallenge: dailyChallenge ?? this.dailyChallenge,
-      recentGames: recentGames ?? this.recentGames,
-      overallXP: overallXP ?? this.overallXP,
-      overallLevel: overallLevel ?? this.overallLevel,
-      totalGamesPlayed: totalGamesPlayed ?? this.totalGamesPlayed,
-    );
-  }
 }
 
-/// The AsyncNotifier that builds and exposes the HomeState
 class HomeNotifier extends AsyncNotifier<HomeState> {
   @override
   Future<HomeState> build() async {
     final repository = ref.watch(gameRepositoryProvider);
-    final allGames = await repository.getAllGames();
+    final allGameInfos = await repository.getAllGames();
 
     int totalGamesPlayed = 0;
     int overallXP = 0;
-    GameInfo? continuePlaying;
+    
+    final List<GameCardData> allGames = [];
+    final List<GameCardData> recentGames = [];
+    
+    GameCardData? continuePlaying;
     HomeDailyChallenge? activeDailyChallenge;
-    final List<GameInfo> recentGames = [];
 
-    // Aggregate data from all available games
-    for (final game in allGames) {
-      final stats = await repository.getGameStats(game.id);
-      final progress = await repository.getGameProgress(game.id);
-      final challenge = await repository.getDailyChallenge(game.id);
+    for (final info in allGameInfos) {
+      final stats = await repository.getGameStats(info.id);
+      final progress = await repository.getGameProgress(info.id);
+      final challenge = await repository.getDailyChallenge(info.id);
 
-      if (stats != null) {
-        totalGamesPlayed += stats.gamesPlayed;
-        if (stats.gamesPlayed > 0) {
-          recentGames.add(game);
-          // Set the first played game as the "Continue Playing" target
-          continuePlaying ??= game; 
-        }
+      final hasDailyBadge = challenge != null && challenge.available && !challenge.completed;
+      final safeStats = stats ?? const GameStats(gamesPlayed: 0, wins: 0, losses: 0, winRate: 0, bestScore: 0, currentRating: 0, highestRating: 0, totalPlayTime: Duration.zero);
+      final safeProgress = progress ?? const GameProgress(unlocked: false, completedTutorial: false, currentLevel: 1, xpEarned: 0, streak: 0);
+
+      totalGamesPlayed += safeStats.gamesPlayed;
+      overallXP += safeProgress.xpEarned;
+
+      final cardData = GameCardData(
+        id: info.id,
+        name: info.name,
+        icon: info.icon,
+        rating: safeStats.currentRating,
+        gamesPlayed: safeStats.gamesPlayed,
+        bestScore: safeStats.bestScore,
+        hasDailyBadge: hasDailyBadge,
+        xp: safeProgress.xpEarned,
+        isUnlocked: safeProgress.unlocked,
+      );
+
+      allGames.add(cardData);
+
+      if (safeStats.gamesPlayed > 0) {
+        recentGames.add(cardData);
+        continuePlaying ??= cardData; 
       }
 
-      if (progress != null) {
-        overallXP += progress.xpEarned;
-      }
-
-      if (challenge != null && challenge.available && !challenge.completed) {
-        // Find the first active challenge
-        activeDailyChallenge ??= HomeDailyChallenge(game: game, challenge: challenge);
+      if (hasDailyBadge && activeDailyChallenge == null) {
+        activeDailyChallenge = HomeDailyChallenge(
+          gameName: info.name,
+          gameId: info.id,
+          challenge: challenge,
+        );
       }
     }
 
-    // Calculate level (e.g., 1000 XP per level)
-    final overallLevel = (overallXP / 1000).floor() + 1;
+    // Default 'Continue Playing' if no games played yet
+    continuePlaying ??= allGames.isNotEmpty ? allGames.first : null;
 
     return HomeState(
-      // Mock featured logic: games with Medium or Hard difficulty
-      featuredGames: allGames.where((g) => g.difficulty == 'Medium' || g.difficulty == 'Hard').toList(),
-      continuePlaying: continuePlaying ?? (allGames.isNotEmpty ? allGames.first : null),
-      dailyChallenge: activeDailyChallenge,
-      recentGames: recentGames.isEmpty ? allGames : recentGames,
+      greeting: _generateGreeting(),
       overallXP: overallXP,
-      overallLevel: overallLevel,
+      overallLevel: (overallXP / 1000).floor() + 1,
       totalGamesPlayed: totalGamesPlayed,
+      dailyChallenge: activeDailyChallenge,
+      continuePlaying: continuePlaying,
+      recentGames: recentGames,
+      allGames: allGames,
     );
+  }
+
+  String _generateGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning!';
+    if (hour < 17) return 'Good Afternoon!';
+    return 'Good Evening!';
   }
 }
 
-/// The provider to be watched by the Home screen UI
 final homeProvider = AsyncNotifierProvider<HomeNotifier, HomeState>(() {
   return HomeNotifier();
 });
