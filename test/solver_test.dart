@@ -5,7 +5,6 @@ import 'package:brain_games/features/code_deducer/logic/solver.dart';
 void main() {
   group('CodeDeducerSolver', () {
     test('returns exact unique solution for a valid 3-digit puzzle', () {
-      // Classic logic puzzle example. Answer is 042.
       final clues = [
         const Clue(guess: '682', correctPlaced: 1, correctWrongPlaced: 0, type: ClueType.oneCorrect),
         const Clue(guess: '614', correctPlaced: 0, correctWrongPlaced: 1, type: ClueType.oneMisplaced),
@@ -37,8 +36,6 @@ void main() {
       expect(solutions.length, greaterThan(1));
       expect(solutions.contains('145'), isTrue);
       expect(solutions.contains('156'), isTrue);
-      // '123' itself should NOT be a solution because it would mean 3 exact matches,
-      // but the clue strictly specifies 1 exact match.
       expect(solutions.contains('123'), isFalse); 
     });
 
@@ -67,13 +64,10 @@ void main() {
         allowDuplicates: true,
       );
 
-      // '1122' should be one of the many valid solutions since 2 digits are correct.
       expect(solutions.contains('1122'), isTrue);
     });
 
     test('filters out duplicate solutions if duplicates are disabled', () {
-      // If we don't provide any clues, it should return all valid permutations.
-      // A 3 digit code with no duplicates has 10 * 9 * 8 = 720 possibilities.
       final solutions = CodeDeducerSolver.solve(
         codeLength: 3,
         clues: [],
