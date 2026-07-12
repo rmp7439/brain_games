@@ -32,28 +32,44 @@ class CodeDeducerPage extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      const Text('Code Length:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      DropdownButton<int>(
+                        value: state.selectedCodeLength,
+                        items: const [
+                          DropdownMenuItem(value: 3, child: Text('3 Digits')),
+                          DropdownMenuItem(value: 4, child: Text('4 Digits')),
+                          DropdownMenuItem(value: 5, child: Text('5 Digits')),
+                        ],
+                        onChanged: (length) {
+                          if (length != null) {
+                            notifier.startNewGame(state.selectedDifficulty, length);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                       const Text('Difficulty:', style: TextStyle(fontWeight: FontWeight.bold)),
                       DropdownButton<Difficulty>(
                         value: state.selectedDifficulty,
                         items: Difficulty.values.map((d) {
                           return DropdownMenuItem(
                             value: d,
-                            child: Text(d.name.toUpperCase()),
+                            // E.g., "EASY (5 Clues)"
+                            child: Text('${d.name.toUpperCase()} (${d.clueCount} Clues)'),
                           );
                         }).toList(),
                         onChanged: (diff) {
-                          if (diff != null) notifier.startNewGame(diff);
+                          if (diff != null) {
+                            notifier.startNewGame(diff, state.selectedCodeLength);
+                          }
                         },
                       ),
                     ],
                   ),
                   const Divider(),
-                  Text(
-                    'Clues',
-                    style: Theme.of(context).textTheme.titleLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
                   Expanded(
                     child: ListView.builder(
                       itemCount: state.puzzle!.clues.length,
@@ -65,8 +81,8 @@ class CodeDeducerPage extends ConsumerWidget {
                               clue.guess,
                               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2),
                             ),
-                            title: Text('${clue.correctPlaced} Exact'),
-                            subtitle: Text('${clue.correctWrongPlaced} Partial'),
+                            // Removed exact/partial counters, now strictly displaying natural language
+                            title: Text(clue.type.description), 
                           ),
                         );
                       },
@@ -86,10 +102,10 @@ class CodeDeducerPage extends ConsumerWidget {
                   TextField(
                     controller: textController,
                     keyboardType: TextInputType.number,
-                    maxLength: state.puzzle!.difficulty.codeLength,
+                    maxLength: state.puzzle!.codeLength,
                     decoration: InputDecoration(
                       border: const OutlineInputBorder(),
-                      labelText: 'Enter ${state.puzzle!.difficulty.codeLength}-digit code',
+                      labelText: 'Enter ${state.puzzle!.codeLength}-digit code',
                     ),
                     enabled: state.status == GameStatus.playing,
                   ),
@@ -101,7 +117,7 @@ class CodeDeducerPage extends ConsumerWidget {
                     )
                   else
                     ElevatedButton(
-                      onPressed: () => notifier.startNewGame(state.selectedDifficulty),
+                      onPressed: () => notifier.startNewGame(state.selectedDifficulty, state.selectedCodeLength),
                       child: const Text('Play Again'),
                     ),
                 ],

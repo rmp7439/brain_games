@@ -4,42 +4,50 @@ import '../models/clue.dart';
 import '../models/puzzle.dart';
 import 'solver.dart';
 
-/// Generates valid puzzles by randomly generating clues and proving their uniqueness.
 class CodeDeducerGenerator {
   static final Random _random = Random();
 
-  /// Generates a puzzle that is guaranteed to have exactly one solution.
-  static Puzzle generate(Difficulty difficulty) {
+  /// Generates a puzzle with exactly [Difficulty.clueCount] clues and a single unique solution.
+  static Puzzle generate(Difficulty difficulty, int codeLength, {bool allowDuplicates = false}) {
     while (true) {
-      final secretCode = _generateCode(difficulty.codeLength, difficulty.allowDuplicates);
+      final secretCode = _generateCode(codeLength, allowDuplicates);
       final List<Clue> clues = [];
+      int loopSafeguard = 0;
 
-      // Add clues until the puzzle has a unique solution
-      for (int attempt = 0; attempt < 20; attempt++) {
-        final guess = _generateCode(difficulty.codeLength, difficulty.allowDuplicates);
+      // 1. Gather exactly the required number of strictly valid clues
+      while (clues.length < difficulty.clueCount && loopSafeguard < 1000) {
+        loopSafeguard++;
+        final guess = _generateCode(codeLength, allowDuplicates);
         
-        // Prevent giving away the exact answer as a clue
         if (guess == secretCode) continue;
+        if (clues.any((c) => c.guess == guess)) continue; // Prevent duplicates
 
-        clues.add(_createClue(guess, secretCode));
+        final clue = _createClue(guess, secretCode);
+        
+        // Discard any clue that doesn't fall into the 5 allowed natural language types
+        if (clue == null) continue;
 
-        final solutions = CodeDeducerSolver.solve(
-          codeLength: difficulty.codeLength,
+        clues.add(clue);
+      }
+
+      // If we couldn't find enough valid clues, restart puzzle generation
+      if (clues.length < difficulty.clueCount) continue;
+
+      // 2. Run the solver to verify uniqueness
+      final solutions = CodeDeducerSolver.solve(
+        codeLength: codeLength,
+        clues: clues,
+        allowDuplicates: allowDuplicates,
+      );
+
+      // 3. Publish only if mathematically perfect
+      if (solutions.length == 1 && solutions.first == secretCode) {
+        return Puzzle(
+          secretCode: secretCode,
           clues: clues,
-          allowDuplicates: difficulty.allowDuplicates,
+          difficulty: difficulty,
+          codeLength: codeLength,
         );
-
-        if (solutions.length == 1 && solutions.first == secretCode) {
-          // Uniqueness proven!
-          return Puzzle(
-            secretCode: secretCode,
-            clues: clues,
-            difficulty: difficulty,
-          );
-        }
-
-        // If something went wrong and we hit 0 solutions, discard this puzzle attempt
-        if (solutions.isEmpty) break;
       }
     }
   }
@@ -55,13 +63,11 @@ class CodeDeducerGenerator {
     return code;
   }
 
-  /// Calculates the exact and partial matches to create a mathematically correct clue.
-  static Clue _createClue(String guess, String secretCode) {
+  static Clue? _createClue(String guess, String secretCode) {
     int exact = 0;
     List<String> unmatchedGuess = [];
     List<String> unmatchedSecret = [];
 
-    // Exact matches
     for (int i = 0; i < guess.length; i++) {
       if (guess[i] == secretCode[i]) {
         exact++;
@@ -71,7 +77,6 @@ class CodeDeducerGenerator {
       }
     }
 
-    // Partial matches
     int partial = 0;
     for (final char in unmatchedGuess) {
       if (unmatchedSecret.contains(char)) {
@@ -80,6 +85,17 @@ class CodeDeducerGenerator {
       }
     }
 
-    return Clue(guess: guess, correctPlaced: exact, correctWrongPlaced: partial);
+    // Map internal counters to the allowed public clue types
+    final type = ClueType.fromMatches(exact, partial);
+    
+    // Reject invalid combinations entirely
+    if (type == null) return null;
+
+    return Clue(
+      guess: guess, 
+      correctPlaced: exact, 
+      correctWrongPlaced: partial,
+      type: type, // Attach semantic type for UI
+    );
   }
 }

@@ -10,12 +10,14 @@ class CodeDeducerState {
   final GameStatus status;
   final String feedback;
   final Difficulty selectedDifficulty;
+  final int selectedCodeLength; // Added independent length state
 
   const CodeDeducerState({
     this.puzzle,
     this.status = GameStatus.playing,
     this.feedback = '',
     this.selectedDifficulty = Difficulty.easy,
+    this.selectedCodeLength = 3,
   });
 
   CodeDeducerState copyWith({
@@ -23,35 +25,38 @@ class CodeDeducerState {
     GameStatus? status,
     String? feedback,
     Difficulty? selectedDifficulty,
+    int? selectedCodeLength,
   }) {
     return CodeDeducerState(
       puzzle: puzzle ?? this.puzzle,
       status: status ?? this.status,
       feedback: feedback ?? this.feedback,
       selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
+      selectedCodeLength: selectedCodeLength ?? this.selectedCodeLength,
     );
   }
 }
 
 class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   CodeDeducerNotifier() : super(const CodeDeducerState()) {
-    startNewGame(Difficulty.easy);
+    startNewGame(Difficulty.easy, 3);
   }
 
-  void startNewGame(Difficulty difficulty) {
+  void startNewGame(Difficulty difficulty, int codeLength) {
     state = CodeDeducerState(
-      puzzle: null, // Triggers loading state
+      puzzle: null,
       selectedDifficulty: difficulty,
+      selectedCodeLength: codeLength,
       feedback: 'Generating puzzle...',
     );
 
-    // Generate puzzle synchronously for MVP, but isolated in real-world to prevent UI lock
-    final puzzle = CodeDeducerGenerator.generate(difficulty);
+    // Defaulting allowDuplicates to false per classic deduction rules
+    final puzzle = CodeDeducerGenerator.generate(difficulty, codeLength, allowDuplicates: false);
     
     state = state.copyWith(
       puzzle: puzzle,
       status: GameStatus.playing,
-      feedback: 'Crack the ${difficulty.codeLength}-digit code!',
+      feedback: 'Crack the $codeLength-digit code!',
     );
   }
 
@@ -60,8 +65,8 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     
     final puzzle = state.puzzle!;
     
-    if (guess.length != puzzle.difficulty.codeLength) {
-      state = state.copyWith(feedback: 'Code must be ${puzzle.difficulty.codeLength} digits.');
+    if (guess.length != puzzle.codeLength) {
+      state = state.copyWith(feedback: 'Code must be ${puzzle.codeLength} digits.');
       return;
     }
 
