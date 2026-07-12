@@ -5,7 +5,6 @@ import '../models/game_stats.dart';
 import 'game_repository.dart';
 
 class MockGameRepository implements GameRepository {
-  // In-memory mock data to persist updates during the app session
   final Map<String, GameInfo> _games = {
     'quiz': const GameInfo(
       id: 'quiz',
@@ -58,7 +57,7 @@ class MockGameRepository implements GameRepository {
       streak: 3,
     ),
     'chess_puzzle': const GameProgress(
-      unlocked: false, // Locked state demonstration
+      unlocked: false,
       completedTutorial: false,
       currentLevel: 1,
       xpEarned: 0,
@@ -78,7 +77,6 @@ class MockGameRepository implements GameRepository {
 
   @override
   Future<List<GameInfo>> getAllGames() async {
-    // Simulating network or database latency
     await Future.delayed(const Duration(milliseconds: 300));
     return _games.values.toList();
   }
@@ -92,7 +90,6 @@ class MockGameRepository implements GameRepository {
   @override
   Future<GameStats?> getGameStats(String gameId) async {
     await Future.delayed(const Duration(milliseconds: 100));
-    // Return default stats if none exist yet
     return _stats[gameId] ??
         const GameStats(
           gamesPlayed: 0,
@@ -116,6 +113,19 @@ class MockGameRepository implements GameRepository {
   Future<DailyChallenge?> getDailyChallenge(String gameId) async {
     await Future.delayed(const Duration(milliseconds: 100));
     return _challenges[gameId];
+  }
+
+  @override
+  Future<GameProgress?> getGameProgress(String gameId) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _progress[gameId] ??
+        const GameProgress(
+          unlocked: true,
+          completedTutorial: false,
+          currentLevel: 1,
+          xpEarned: 0,
+          streak: 0,
+        );
   }
 
   @override
