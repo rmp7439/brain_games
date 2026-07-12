@@ -51,18 +51,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       // Inline routes to prevent crashes without needing extra files
       GoRoute(
-        path: '/code_breaker',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) =>
-            Scaffold(appBar: AppBar(title: const Text('Code Breaker'))),
-      ),
-      GoRoute(
-        path: '/chess_puzzle',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) =>
-            Scaffold(appBar: AppBar(title: const Text('Chess Puzzle'))),
-      ),
-      GoRoute(
         path: '/code_deducer',
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const CodeDeducerPage(),

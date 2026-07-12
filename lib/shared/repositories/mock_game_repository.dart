@@ -6,24 +6,6 @@ import 'game_repository.dart';
 
 class MockGameRepository implements GameRepository {
   final Map<String, GameInfo> _games = {
-    'code_breaker': const GameInfo(
-      id: 'code_breaker',
-      name: 'Code Breaker',
-      description: 'Crack the hidden code.',
-      icon: 'password',
-      difficulty: 'Hard',
-      category: 'Logic',
-      enabled: true,
-    ),
-    'chess_puzzle': const GameInfo(
-      id: 'chess_puzzle',
-      name: 'Chess Puzzle',
-      description: 'Solve the checkmate in one move.',
-      icon: 'extension',
-      difficulty: 'Expert',
-      category: 'Strategy',
-      enabled: true,
-    ),
     'code_deducer': const GameInfo(
       id: 'code_deducer',
       name: 'Code Deducer',
@@ -38,13 +20,6 @@ class MockGameRepository implements GameRepository {
   final Map<String, GameStats> _stats = {};
 
   final Map<String, GameProgress> _progress = {
-    'chess_puzzle': const GameProgress(
-      unlocked: false,
-      completedTutorial: false,
-      currentLevel: 1,
-      xpEarned: 0,
-      streak: 0,
-    ),
     'code_deducer': const GameProgress(
       unlocked: true,
       completedTutorial: false,
@@ -54,7 +29,15 @@ class MockGameRepository implements GameRepository {
     ),
   };
 
-  final Map<String, DailyChallenge> _challenges = {};
+  final Map<String, DailyChallenge> _challenges = {
+    'code_deducer': DailyChallenge(
+      available: true,
+      completed: false,
+      rewardXP: 100,
+      rewardCoins: 50,
+      expiresAt: DateTime.now().add(const Duration(hours: 12)),
+    ),
+  };
 
   @override
   Future<List<GameInfo>> getAllGames() async {
