@@ -28,6 +28,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [GoRoute(path: '/settings', builder: (context, state) => const SettingsPage())]),
         ],
       ),
+      // Inline routes to prevent crashes without needing extra files
+      GoRoute(
+        path: '/quiz',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => Scaffold(appBar: AppBar(title: const Text('Quiz'))),
+      ),
+      GoRoute(
+        path: '/code_breaker',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => Scaffold(appBar: AppBar(title: const Text('Code Breaker'))),
+      ),
+      GoRoute(
+        path: '/chess_puzzle',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => Scaffold(appBar: AppBar(title: const Text('Chess Puzzle'))),
+      ),
     ],
   );
 });
