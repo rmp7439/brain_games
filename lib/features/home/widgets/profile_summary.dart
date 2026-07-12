@@ -46,7 +46,7 @@ class ProfileSummary extends StatelessWidget {
         Text(
           label,
           style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+            color: theme.colorScheme.onPrimaryContainer.withValues(alpha : 0.8),
           ),
         ),
       ],

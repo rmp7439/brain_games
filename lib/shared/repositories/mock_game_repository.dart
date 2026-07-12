@@ -6,15 +6,6 @@ import 'game_repository.dart';
 
 class MockGameRepository implements GameRepository {
   final Map<String, GameInfo> _games = {
-    'quiz': const GameInfo(
-      id: 'quiz',
-      name: 'Quiz',
-      description: 'Test your general knowledge.',
-      icon: 'lightbulb_outline',
-      difficulty: 'Medium',
-      category: 'Trivia',
-      enabled: true,
-    ),
     'code_breaker': const GameInfo(
       id: 'code_breaker',
       name: 'Code Breaker',
@@ -33,29 +24,20 @@ class MockGameRepository implements GameRepository {
       category: 'Strategy',
       enabled: true,
     ),
-  };
-
-  final Map<String, GameStats> _stats = {
-    'quiz': const GameStats(
-      gamesPlayed: 42,
-      wins: 30,
-      losses: 12,
-      winRate: 0.71,
-      bestScore: 100,
-      currentRating: 1200,
-      highestRating: 1350,
-      totalPlayTime: Duration(hours: 5, minutes: 20),
+    'code_deducer': const GameInfo(
+      id: 'code_deducer',
+      name: 'Code Deducer',
+      description: 'Crack the hidden numeric code using pure logic.',
+      icon: 'psychology',
+      difficulty: 'Varies',
+      category: 'Logic',
+      enabled: true,
     ),
   };
+
+  final Map<String, GameStats> _stats = {};
 
   final Map<String, GameProgress> _progress = {
-    'quiz': const GameProgress(
-      unlocked: true,
-      completedTutorial: true,
-      currentLevel: 5,
-      xpEarned: 2500,
-      streak: 3,
-    ),
     'chess_puzzle': const GameProgress(
       unlocked: false,
       completedTutorial: false,
@@ -63,17 +45,16 @@ class MockGameRepository implements GameRepository {
       xpEarned: 0,
       streak: 0,
     ),
-  };
-
-  final Map<String, DailyChallenge> _challenges = {
-    'quiz': DailyChallenge(
-      available: true,
-      completed: false,
-      rewardXP: 100,
-      rewardCoins: 50,
-      expiresAt: DateTime.now().add(const Duration(hours: 12)),
+    'code_deducer': const GameProgress(
+      unlocked: true,
+      completedTutorial: false,
+      currentLevel: 1,
+      xpEarned: 0,
+      streak: 0,
     ),
   };
+
+  final Map<String, DailyChallenge> _challenges = {};
 
   @override
   Future<List<GameInfo>> getAllGames() async {

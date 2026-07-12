@@ -9,6 +9,8 @@ import '../../features/settings/settings_page.dart';
 import '../../features/statistics/statistics_page.dart';
 import '../../shared/widgets/scaffold_with_nav_bar.dart';
 
+import '../../features/code_deducer/code_deducer_page.dart';
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -21,28 +23,49 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return ScaffoldWithNavBar(navigationShell: navigationShell);
         },
         branches: [
-          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (context, state) => const HomePage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/statistics', builder: (context, state) => const StatisticsPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/achievements', builder: (context, state) => const AchievementsPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (context, state) => const ProfilePage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/settings', builder: (context, state) => const SettingsPage())]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/home', builder: (context, state) => const HomePage())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/statistics',
+                builder: (context, state) => const StatisticsPage())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/achievements',
+                builder: (context, state) => const AchievementsPage())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfilePage())
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsPage())
+          ]),
         ],
       ),
       // Inline routes to prevent crashes without needing extra files
       GoRoute(
-        path: '/quiz',
-        parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => Scaffold(appBar: AppBar(title: const Text('Quiz'))),
-      ),
-      GoRoute(
         path: '/code_breaker',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => Scaffold(appBar: AppBar(title: const Text('Code Breaker'))),
+        builder: (context, state) =>
+            Scaffold(appBar: AppBar(title: const Text('Code Breaker'))),
       ),
       GoRoute(
         path: '/chess_puzzle',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => Scaffold(appBar: AppBar(title: const Text('Chess Puzzle'))),
+        builder: (context, state) =>
+            Scaffold(appBar: AppBar(title: const Text('Chess Puzzle'))),
+      ),
+      GoRoute(
+        path: '/code_deducer',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CodeDeducerPage(),
       ),
     ],
   );

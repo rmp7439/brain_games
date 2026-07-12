@@ -49,7 +49,7 @@ class DailyChallengeCard extends StatelessWidget {
                   Text(
                     'Reward: $rewardXP XP • $rewardCoins Coins',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onTertiary.withOpacity(0.9),
+                      color: theme.colorScheme.onTertiary.withValues(alpha : 0.9),
                     ),
                   ),
                 ],

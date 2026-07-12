@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/models/daily_challenge.dart';
-import '../../../shared/models/game_info.dart';
 import '../../../shared/models/game_card_data.dart';
 import '../../../shared/providers/repository_providers.dart';
+
+import '../../../shared/models/game_stats.dart';
+import '../../../shared/models/game_progress.dart';
 
 class HomeDailyChallenge {
   final String gameName;

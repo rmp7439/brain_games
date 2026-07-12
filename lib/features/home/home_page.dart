@@ -8,6 +8,8 @@ import 'widgets/daily_challenge_card.dart';
 import 'widgets/profile_summary.dart';
 import 'widgets/section_header.dart';
 
+import '../../shared/models/game_card_data.dart';
+
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 

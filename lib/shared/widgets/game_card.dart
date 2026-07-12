@@ -32,7 +32,7 @@ class GameCard extends StatelessWidget {
 
     return Card(
       elevation: isLocked ? 0 : 2,
-      color: isLocked ? colorScheme.surfaceContainerHighest.withOpacity(0.5) : colorScheme.surfaceContainer,
+      color: isLocked ? colorScheme.surfaceContainerHighest.withValues(alpha : 0.5) : colorScheme.surfaceContainer,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: isLocked ? null : onTap,
@@ -51,7 +51,7 @@ class GameCard extends StatelessWidget {
                     ),
                     child: Icon(
                       _getIconData(data.icon),
-                      color: isLocked ? colorScheme.onSurface.withOpacity(0.5) : colorScheme.onPrimaryContainer,
+                      color: isLocked ? colorScheme.onSurface.withValues(alpha : 0.5) : colorScheme.onPrimaryContainer,
                     ),
                   ),
                   const SizedBox(width: 16.0),
@@ -66,7 +66,7 @@ class GameCard extends StatelessWidget {
                                 data.name,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: isLocked ? colorScheme.onSurface.withOpacity(0.5) : colorScheme.onSurface,
+                                  color: isLocked ? colorScheme.onSurface.withValues(alpha : 0.5) : colorScheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -81,7 +81,7 @@ class GameCard extends StatelessWidget {
                         Text(
                           'Rating: ${data.rating}  •  XP: ${data.xp}',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: isLocked ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.onSurfaceVariant,
+                            color: isLocked ? colorScheme.onSurfaceVariant.withValues(alpha : 0.5) : colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -89,7 +89,7 @@ class GameCard extends StatelessWidget {
                   ),
                   Icon(
                     isLocked ? Icons.lock : Icons.chevron_right,
-                    color: isLocked ? colorScheme.onSurface.withOpacity(0.3) : colorScheme.primary,
+                    color: isLocked ? colorScheme.onSurface.withValues(alpha : 0.3) : colorScheme.primary,
                   ),
                 ],
               ),
@@ -100,14 +100,14 @@ class GameCard extends StatelessWidget {
                   Text(
                     'Games Played: ${data.gamesPlayed}',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: isLocked ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.onSurfaceVariant,
+                      color: isLocked ? colorScheme.onSurfaceVariant.withValues(alpha : 0.5) : colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
                     'Best: ${data.bestScore}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: isLocked ? colorScheme.onSurfaceVariant.withOpacity(0.5) : colorScheme.onSurfaceVariant,
+                      color: isLocked ? colorScheme.onSurfaceVariant.withValues(alpha : 0.5) : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],

@@ -6,17 +6,6 @@ import '../../../shared/models/game_model.dart';
 final gamesProvider = Provider<List<GameModel>>((ref) {
   return const [
     GameModel(
-      id: 'quiz',
-      name: 'Quiz',
-      icon: Icons.lightbulb_outline,
-      currentRating: 1200,
-      bestRating: 1350,
-      gamesPlayed: 42,
-      hasDailyChallenge: true,
-      isUnlocked: true,
-      routePath: '/quiz',
-    ),
-    GameModel(
       id: 'code_breaker',
       name: 'Code Breaker',
       icon: Icons.password,
@@ -37,6 +26,17 @@ final gamesProvider = Provider<List<GameModel>>((ref) {
       hasDailyChallenge: true,
       isUnlocked: false,
       routePath: '/chess_puzzle',
+    ),
+    GameModel(
+      id: 'code_deducer',
+      name: 'Code Deducer',
+      icon: Icons.psychology,
+      currentRating: 0,
+      bestRating: 0,
+      gamesPlayed: 0,
+      hasDailyChallenge: false,
+      isUnlocked: true,
+      routePath: '/code_deducer',
     ),
   ];
 });
