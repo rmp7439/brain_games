@@ -7,14 +7,14 @@ import 'models/puzzle.dart';
 import 'models/clue.dart';
 import 'providers/code_deducer_provider.dart';
 
-class CodeDeducerPage extends ConsumerStatefulWidget {
+class CodeDeducerPage extends StatefulWidget {
   const CodeDeducerPage({super.key});
 
   @override
-  ConsumerState<CodeDeducerPage> createState() => _CodeDeducerPageState();
+  State<CodeDeducerPage> createState() => _CodeDeducerPageState();
 }
 
-class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
+class _CodeDeducerPageState extends State<CodeDeducerPage> {
   late TextEditingController _textController;
 
   @override
@@ -27,11 +27,6 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
   void dispose() {
     _textController.dispose();
     super.dispose();
-  }
-
-  void _onGameChanged(Difficulty diff, int length) {
-    _textController.clear();
-    ref.read(codeDeducerProvider.notifier).startNewGame(diff, length);
   }
 
   @override
@@ -49,19 +44,30 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildSettingsHeader(),
+            _SettingsHeader(textController: _textController),
             const SizedBox(height: 16),
             const Divider(),
             Expanded(
-              child: _buildAnimatedGameBoard(),
+              child: _AnimatedGameBoard(textController: _textController),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildSettingsHeader() {
+class _SettingsHeader extends ConsumerWidget {
+  final TextEditingController textController;
+  const _SettingsHeader({required this.textController});
+
+  void _onGameChanged(WidgetRef ref, Difficulty diff, int length) {
+    textController.clear();
+    ref.read(codeDeducerProvider.notifier).startNewGame(diff, length);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedLength = ref.watch(codeDeducerProvider.select((s) => s.selectedCodeLength));
     final selectedDiff = ref.watch(codeDeducerProvider.select((s) => s.selectedDifficulty));
 
@@ -79,7 +85,7 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
               value: length,
               groupValue: selectedLength,
               label: '$length Digits',
-              onChanged: (val) => _onGameChanged(selectedDiff, val),
+              onChanged: (val) => _onGameChanged(ref, selectedDiff, val),
             );
           }).toList(),
         ),
@@ -95,20 +101,36 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
               value: d,
               groupValue: selectedDiff,
               label: d.name.toUpperCase(),
-              onChanged: (val) => _onGameChanged(val, selectedLength),
+              onChanged: (val) => _onGameChanged(ref, val, selectedLength),
             );
           }).toList(),
         ),
       ],
     );
   }
+}
 
-  Widget _buildAnimatedGameBoard() {
+class _AnimatedGameBoard extends ConsumerWidget {
+  final TextEditingController textController;
+  const _AnimatedGameBoard({required this.textController});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(codeDeducerProvider);
     final notifier = ref.read(codeDeducerProvider.notifier);
 
+    // Initial load state
+    if (state.puzzle == null && state.isGenerating) {
+      return const Center(
+        key: ValueKey('initial_loading'),
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (state.puzzle == null) return const SizedBox.shrink();
+
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 350),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
       transitionBuilder: (child, animation) {
@@ -123,18 +145,12 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
           ),
         );
       },
-      child: state.puzzle == null
-          ? const Center(
-              key: ValueKey('loading'),
-              child: CircularProgressIndicator(),
-            )
-          : _GameBoardContent(
-              key: ValueKey(state.puzzle), 
-              state: state,
-              notifier: notifier,
-              textController: _textController,
-              onPlayAgain: () => _onGameChanged(state.selectedDifficulty, state.selectedCodeLength),
-            ),
+      child: _GameBoardContent(
+        key: ValueKey(state.puzzle), 
+        state: state,
+        notifier: notifier,
+        textController: textController,
+      ),
     );
   }
 }
@@ -143,99 +159,105 @@ class _GameBoardContent extends StatelessWidget {
   final CodeDeducerState state;
   final CodeDeducerNotifier notifier;
   final TextEditingController textController;
-  final VoidCallback onPlayAgain;
 
   const _GameBoardContent({
     super.key,
     required this.state,
     required this.notifier,
     required this.textController,
-    required this.onPlayAgain,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ListView.builder(
-            shrinkWrap: true, 
-            physics: const NeverScrollableScrollPhysics(), 
-            itemCount: state.puzzle!.clues.length,
-            itemBuilder: (context, index) {
-              final clue = state.puzzle!.clues[index];
-              return _StaggeredClueCard(clue: clue, index: index);
-            },
-          ),
-          const SizedBox(height: 16),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Text(
-              state.feedback,
-              key: ValueKey('${state.feedback}_${state.guessCount}'), 
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: state.status == GameStatus.won ? Colors.green : Colors.red,
+    // Dim the board while generating to provide visual context without completely removing the UI
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 250),
+      opacity: state.isGenerating ? 0.4 : 1.0,
+      child: IgnorePointer(
+        ignoring: state.isGenerating,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ListView.builder(
+                shrinkWrap: true, 
+                physics: const NeverScrollableScrollPhysics(), 
+                itemCount: state.puzzle!.clues.length,
+                itemBuilder: (context, index) {
+                  final clue = state.puzzle!.clues[index];
+                  return _StaggeredClueCard(clue: clue, index: index);
+                },
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: textController,
-            keyboardType: TextInputType.number,
-            maxLength: state.puzzle!.codeLength,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly, 
-            ],
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              labelText: 'Enter ${state.puzzle!.codeLength}-digit code',
-              filled: true,
-              counterText: '', 
-            ),
-            enabled: state.status == GameStatus.playing,
-          ),
-          const SizedBox(height: 16),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: state.status == GameStatus.playing
-                ? ElevatedButton(
-                    key: const ValueKey('submit'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      final guess = textController.text.trim();
-                      notifier.submitGuess(guess);
-                      
-                      // Only clear input and drop keyboard if the guess was actually valid length
-                      if (guess.length == state.puzzle!.codeLength) {
-                        textController.clear();
-                        FocusScope.of(context).unfocus();
-                      }
-                    },
-                    child: const Text('Submit Guess', style: TextStyle(fontSize: 16)),
-                  )
-                : ElevatedButton(
-                    key: const ValueKey('play_again'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      onPlayAgain();
-                    },
-                    child: const Text('Play Again', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 16),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  state.feedback,
+                  key: ValueKey('${state.feedback}_${state.guessCount}'), 
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: state.status == GameStatus.won ? Colors.green : Colors.red,
                   ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: textController,
+                keyboardType: TextInputType.number,
+                maxLength: state.puzzle!.codeLength,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly, 
+                ],
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  labelText: 'Enter ${state.puzzle!.codeLength}-digit code',
+                  filled: true,
+                  counterText: '', 
+                ),
+                enabled: state.status == GameStatus.playing && !state.isGenerating,
+              ),
+              const SizedBox(height: 16),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: state.status == GameStatus.playing
+                    ? ElevatedButton(
+                        key: const ValueKey('submit'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          final guess = textController.text.trim();
+                          notifier.submitGuess(guess);
+                          
+                          if (guess.length == state.puzzle!.codeLength) {
+                            textController.clear();
+                            FocusScope.of(context).unfocus();
+                          }
+                        },
+                        child: const Text('Submit Guess', style: TextStyle(fontSize: 16)),
+                      )
+                    : ElevatedButton(
+                        key: const ValueKey('play_again'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          textController.clear();
+                          notifier.startNewGame(state.selectedDifficulty, state.selectedCodeLength);
+                        },
+                        child: const Text('Play Again', style: TextStyle(fontSize: 16)),
+                      ),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-          const SizedBox(height: 8),
-        ],
+        ),
       ),
     );
   }
@@ -303,9 +325,9 @@ class _AnimatedSelectionButton<T> extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
         child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 1.0, end: isSelected ? 1.03 : 1.0),
+          tween: Tween(begin: 1.0, end: isSelected ? 1.02 : 1.0),
           duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutBack,
+          curve: Curves.easeOutCubic,
           builder: (context, scale, child) {
             return Transform.scale(
               scale: scale,
@@ -313,11 +335,15 @@ class _AnimatedSelectionButton<T> extends StatelessWidget {
             );
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
             decoration: BoxDecoration(
               color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+                width: 1.5,
+              ),
               boxShadow: isSelected
                   ? [
                       BoxShadow(
@@ -342,7 +368,7 @@ class _AnimatedSelectionButton<T> extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 12.0),
                   child: Center(
                     child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
+                      duration: const Duration(milliseconds: 250),
                       style: TextStyle(
                         color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,

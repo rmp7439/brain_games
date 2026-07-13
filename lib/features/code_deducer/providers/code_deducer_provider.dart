@@ -13,6 +13,7 @@ class CodeDeducerState {
   final Difficulty selectedDifficulty;
   final int selectedCodeLength;
   final int guessCount; 
+  final bool isGenerating;
 
   const CodeDeducerState({
     this.puzzle,
@@ -21,6 +22,7 @@ class CodeDeducerState {
     this.selectedDifficulty = Difficulty.easy,
     this.selectedCodeLength = 3,
     this.guessCount = 0,
+    this.isGenerating = false,
   });
 
   CodeDeducerState copyWith({
@@ -30,6 +32,7 @@ class CodeDeducerState {
     Difficulty? selectedDifficulty,
     int? selectedCodeLength,
     int? guessCount,
+    bool? isGenerating,
   }) {
     return CodeDeducerState(
       puzzle: puzzle ?? this.puzzle,
@@ -38,6 +41,7 @@ class CodeDeducerState {
       selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
       selectedCodeLength: selectedCodeLength ?? this.selectedCodeLength,
       guessCount: guessCount ?? this.guessCount,
+      isGenerating: isGenerating ?? this.isGenerating,
     );
   }
 }
@@ -52,12 +56,12 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   Future<void> startNewGame(Difficulty difficulty, int codeLength) async {
     final thisGenerationId = ++_currentGenerationId;
 
-    state = CodeDeducerState(
-      puzzle: null,
+    // Acknowledge tap immediately without dropping the current puzzle
+    state = state.copyWith(
       selectedDifficulty: difficulty,
       selectedCodeLength: codeLength,
+      isGenerating: true, 
       feedback: 'Generating puzzle...',
-      guessCount: 0,
     );
 
     try {
@@ -69,20 +73,24 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
         ),
       );
 
-      // Only update state if this is still the most recently requested puzzle
       if (_currentGenerationId == thisGenerationId) {
-        state = state.copyWith(
+        // Build a fresh state to reset the board completely
+        state = CodeDeducerState(
           puzzle: puzzle,
           status: GameStatus.playing,
           feedback: 'Crack the $codeLength-digit code!',
+          selectedDifficulty: difficulty,
+          selectedCodeLength: codeLength,
+          guessCount: 0,
+          isGenerating: false,
         );
       }
     } catch (e) {
-      // Graceful fallback for extreme mathematical edge cases or isolate crashes
       if (_currentGenerationId == thisGenerationId) {
         state = state.copyWith(
-          feedback: 'Failed to generate puzzle. Please try another difficulty.',
-          status: GameStatus.lost, 
+          feedback: 'Failed to generate puzzle. Try again.',
+          status: GameStatus.lost,
+          isGenerating: false,
         );
       }
     }
@@ -91,7 +99,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   void submitGuess(String guess) {
     final cleanGuess = guess.trim();
     
-    if (state.status != GameStatus.playing || state.puzzle == null) return;
+    if (state.status != GameStatus.playing || state.puzzle == null || state.isGenerating) return;
     
     final puzzle = state.puzzle!;
     

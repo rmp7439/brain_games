@@ -4,35 +4,34 @@ class ConstraintEngine {
   static bool evaluateClue(String candidate, Clue clue) {
     if (candidate.length != clue.guess.length) return false;
 
-    int actualCorrectPlaced = 0;
-    final List<String> unmatchedCandidate = [];
-    final List<String> unmatchedGuess = [];
+    int actualExact = 0;
+    // Fixed-length primitive arrays eliminate costly Map allocations in the hot loop
+    final List<int> candidateCounts = List.filled(10, 0);
+    final List<int> guessCounts = List.filled(10, 0);
 
     for (int i = 0; i < candidate.length; i++) {
-      if (candidate[i] == clue.guess[i]) {
-        actualCorrectPlaced++;
+      // Using codeUnitAt is exponentially faster than string indexing in Dart
+      final int cUnit = candidate.codeUnitAt(i) - 48; // '0' is ASCII 48
+      final int gUnit = clue.guess.codeUnitAt(i) - 48;
+
+      if (cUnit == gUnit) {
+        actualExact++;
       } else {
-        unmatchedCandidate.add(candidate[i]);
-        unmatchedGuess.add(clue.guess[i]);
+        candidateCounts[cUnit]++;
+        guessCounts[gUnit]++;
       }
     }
 
-    if (actualCorrectPlaced != clue.correctPlaced) return false;
+    if (actualExact != clue.correctPlaced) return false;
 
-    int actualCorrectWrongPlaced = 0;
-    final Map<String, int> candidateCounts = {};
-    for (final char in unmatchedCandidate) {
-      candidateCounts[char] = (candidateCounts[char] ?? 0) + 1;
+    int actualPartial = 0;
+    for (int i = 0; i < 10; i++) {
+      final int cCount = candidateCounts[i];
+      final int gCount = guessCounts[i];
+      // Faster than math.min
+      actualPartial += (cCount < gCount) ? cCount : gCount;
     }
 
-    for (final char in unmatchedGuess) {
-      final availableCount = candidateCounts[char] ?? 0;
-      if (availableCount > 0) {
-        actualCorrectWrongPlaced++;
-        candidateCounts[char] = availableCount - 1;
-      }
-    }
-
-    return actualCorrectWrongPlaced == clue.correctWrongPlaced;
+    return actualPartial == clue.correctWrongPlaced;
   }
 }
