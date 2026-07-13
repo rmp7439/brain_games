@@ -61,10 +61,7 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
     );
   }
 
-  /// Builds the settings header utilizing `.select` to prevent unnecessary 
-  /// rebuilds when the puzzle state changes.
   Widget _buildSettingsHeader() {
-    // Only watch the specific settings values
     final selectedLength = ref.watch(codeDeducerProvider.select((s) => s.selectedCodeLength));
     final selectedDiff = ref.watch(codeDeducerProvider.select((s) => s.selectedDifficulty));
 
@@ -106,7 +103,6 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
     );
   }
 
-  /// Builds the game board with a custom Fade + Slide transition.
   Widget _buildAnimatedGameBoard() {
     final state = ref.watch(codeDeducerProvider);
     final notifier = ref.read(codeDeducerProvider.notifier);
@@ -120,7 +116,7 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
           opacity: animation,
           child: SlideTransition(
             position: Tween<Offset>(
-              begin: const Offset(0.0, 0.05), // Slight slide up
+              begin: const Offset(0.0, 0.05),
               end: Offset.zero,
             ).animate(animation),
             child: child,
@@ -133,7 +129,7 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
               child: CircularProgressIndicator(),
             )
           : _GameBoardContent(
-              key: ValueKey(state.puzzle!.secretCode), // Unique key to force transition on new puzzle
+              key: ValueKey(state.puzzle), 
               state: state,
               notifier: notifier,
               textController: _textController,
@@ -143,7 +139,6 @@ class _CodeDeducerPageState extends ConsumerState<CodeDeducerPage> {
   }
 }
 
-/// Extracted game board content to keep the widget tree clean.
 class _GameBoardContent extends StatelessWidget {
   final CodeDeducerState state;
   final CodeDeducerNotifier notifier;
@@ -160,15 +155,13 @@ class _GameBoardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Wrap the Column in a SingleChildScrollView so it can scroll when the keyboard opens
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 2. Remove the Expanded wrapper from the ListView
           ListView.builder(
-            shrinkWrap: true, // 3. Allow the list to size to its children
-            physics: const NeverScrollableScrollPhysics(), // Scroll is handled by the parent SingleChildScrollView
+            shrinkWrap: true, 
+            physics: const NeverScrollableScrollPhysics(), 
             itemCount: state.puzzle!.clues.length,
             itemBuilder: (context, index) {
               final clue = state.puzzle!.clues[index];
@@ -180,7 +173,7 @@ class _GameBoardContent extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             child: Text(
               state.feedback,
-              key: ValueKey(state.feedback),
+              key: ValueKey('${state.feedback}_${state.guessCount}'), 
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
@@ -194,10 +187,14 @@ class _GameBoardContent extends StatelessWidget {
             controller: textController,
             keyboardType: TextInputType.number,
             maxLength: state.puzzle!.codeLength,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly, 
+            ],
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               labelText: 'Enter ${state.puzzle!.codeLength}-digit code',
               filled: true,
+              counterText: '', 
             ),
             enabled: state.status == GameStatus.playing,
           ),
@@ -213,8 +210,14 @@ class _GameBoardContent extends StatelessWidget {
                     ),
                     onPressed: () {
                       HapticFeedback.mediumImpact();
-                      notifier.submitGuess(textController.text);
-                      textController.clear();
+                      final guess = textController.text.trim();
+                      notifier.submitGuess(guess);
+                      
+                      // Only clear input and drop keyboard if the guess was actually valid length
+                      if (guess.length == state.puzzle!.codeLength) {
+                        textController.clear();
+                        FocusScope.of(context).unfocus();
+                      }
                     },
                     child: const Text('Submit Guess', style: TextStyle(fontSize: 16)),
                   )
@@ -238,7 +241,6 @@ class _GameBoardContent extends StatelessWidget {
   }
 }
 
-/// Beautifully fades and slides in clue cards sequentially based on their index.
 class _StaggeredClueCard extends StatelessWidget {
   final Clue clue;
   final int index;
@@ -250,7 +252,6 @@ class _StaggeredClueCard extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       key: ValueKey(clue.guess),
       tween: Tween(begin: 0.0, end: 1.0),
-      // Adding a slight mathematical delay based on index for the staggered effect
       duration: Duration(milliseconds: 300 + (index * 100)),
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
@@ -280,7 +281,6 @@ class _StaggeredClueCard extends StatelessWidget {
   }
 }
 
-/// A custom button that animates its background, text style, scale, and shadow when selected.
 class _AnimatedSelectionButton<T> extends StatelessWidget {
   final T value;
   final T groupValue;
@@ -321,7 +321,7 @@ class _AnimatedSelectionButton<T> extends StatelessWidget {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                        color: theme.colorScheme.primary.withValues(alpha : 0.3),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       )
