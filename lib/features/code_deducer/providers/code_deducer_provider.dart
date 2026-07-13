@@ -12,6 +12,7 @@ class CodeDeducerState {
   final String feedback;
   final Difficulty selectedDifficulty;
   final int selectedCodeLength;
+  final int guessCount; // Fix 3: Track guesses to force UI animations
 
   const CodeDeducerState({
     this.puzzle,
@@ -19,6 +20,7 @@ class CodeDeducerState {
     this.feedback = '',
     this.selectedDifficulty = Difficulty.easy,
     this.selectedCodeLength = 3,
+    this.guessCount = 0,
   });
 
   CodeDeducerState copyWith({
@@ -27,6 +29,7 @@ class CodeDeducerState {
     String? feedback,
     Difficulty? selectedDifficulty,
     int? selectedCodeLength,
+    int? guessCount,
   }) {
     return CodeDeducerState(
       puzzle: puzzle ?? this.puzzle,
@@ -34,42 +37,40 @@ class CodeDeducerState {
       feedback: feedback ?? this.feedback,
       selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
       selectedCodeLength: selectedCodeLength ?? this.selectedCodeLength,
+      guessCount: guessCount ?? this.guessCount,
     );
   }
 }
 
 class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
+  int _currentGenerationId = 0; // Fix 1: Thread-safety token
+
   CodeDeducerNotifier() : super(const CodeDeducerState()) {
     startNewGame(Difficulty.easy, 3);
   }
 
-  /// Starts a new game by immediately updating the UI state, then offloading
-  /// the heavy mathematical puzzle generation to a background isolate.
   Future<void> startNewGame(Difficulty difficulty, int codeLength) async {
-    // 1. Instantly yield state to the UI.
-    // The puzzle becomes null, allowing the AnimatedSwitcher to transition 
-    // to a loading state while the setting chips animate instantly.
+    // Generate a unique ID for this specific generation request
+    final thisGenerationId = ++_currentGenerationId;
+
     state = CodeDeducerState(
       puzzle: null,
       selectedDifficulty: difficulty,
       selectedCodeLength: codeLength,
       feedback: 'Generating puzzle...',
+      guessCount: 0,
     );
 
-    // 2. Offload the heavy generation to a background thread.
-    // This entirely frees the main UI thread, eliminating all perceived lag.
     final puzzle = await Isolate.run(
       () => CodeDeducerGenerator.generate(
         difficulty,
         codeLength,
-        allowDuplicates: false, // Defaulting to classic deduction rules
+        allowDuplicates: false, 
       ),
     );
 
-    // 3. Race-Condition Safeguard.
-    // If the user rapidly tapped settings while a puzzle was generating, 
-    // discard this result if it no longer matches the currently desired state.
-    if (state.selectedDifficulty == difficulty && state.selectedCodeLength == codeLength) {
+    // Fix 1: Only update state if this is still the most recently requested puzzle
+    if (_currentGenerationId == thisGenerationId) {
       state = state.copyWith(
         puzzle: puzzle,
         status: GameStatus.playing,
@@ -79,7 +80,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   }
 
   void submitGuess(String guess) {
-    // 1. Sanitize input to prevent invisible spaces from failing the length validation
     final cleanGuess = guess.trim();
     
     if (state.status != GameStatus.playing || state.puzzle == null) return;
@@ -87,20 +87,23 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     final puzzle = state.puzzle!;
     
     if (cleanGuess.length != puzzle.codeLength) {
-      state = state.copyWith(feedback: 'Code must be ${puzzle.codeLength} digits.');
+      state = state.copyWith(
+        feedback: 'Code must be ${puzzle.codeLength} digits.',
+        guessCount: state.guessCount + 1, // Fix 3: Force animation
+      );
       return;
     }
 
-    // 2. Evaluate the win condition
     if (cleanGuess == puzzle.secretCode) {
       state = state.copyWith(
         status: GameStatus.won,
         feedback: 'Correct! The code was $cleanGuess.',
+        guessCount: state.guessCount + 1,
       );
     } else {
-      // 3. Guarantee a unique feedback string so AnimatedSwitcher ALWAYS detects a change
       state = state.copyWith(
         feedback: '$cleanGuess is incorrect. Try again!',
+        guessCount: state.guessCount + 1, // Fix 3: Force animation on repeat guesses
       );
     }
   }
