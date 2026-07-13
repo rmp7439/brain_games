@@ -10,6 +10,7 @@ import '../../features/statistics/statistics_page.dart';
 import '../../shared/widgets/scaffold_with_nav_bar.dart';
 
 import '../../features/code_deducer/code_deducer_page.dart';
+import '../../features/code_deducer/code_deducer_play_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -49,11 +50,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ]),
         ],
       ),
-      // Inline routes to prevent crashes without needing extra files
+      // Code Deducer Game Flow
       GoRoute(
         path: '/code_deducer',
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => const CodeDeducerPage(),
+        builder: (context, state) => const CodeDeducerSetupPage(),
+        routes: [
+          GoRoute(
+            path: 'play',
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (context, state) => const CodeDeducerPlayPage(),
+          ),
+        ],
       ),
     ],
   );

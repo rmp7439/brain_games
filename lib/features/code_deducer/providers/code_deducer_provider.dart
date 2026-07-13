@@ -16,7 +16,6 @@ class CodeDeducerState {
   final int guessCount; 
   final bool isGenerating;
   
-  // Player State Extensions
   final int attemptsRemaining;
   final int attemptsUsed;
   final DateTime? startTime;
@@ -38,7 +37,6 @@ class CodeDeducerState {
     this.earnedXp = 0,
   });
 
-  // Getters for external statistics tracking
   Duration? get completionTime => (startTime != null && endTime != null) ? endTime!.difference(startTime!) : null;
   bool get isGameOver => status == GameStatus.lost;
   bool get isSolved => status == GameStatus.won;
@@ -77,25 +75,34 @@ class CodeDeducerState {
 class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   int _currentGenerationId = 0; 
 
-  CodeDeducerNotifier() : super(const CodeDeducerState()) {
-    startNewGame(Difficulty.easy, 3);
-  }
+  CodeDeducerNotifier() : super(const CodeDeducerState());
 
-  Future<void> startNewGame(Difficulty difficulty, int codeLength) async {
-    final thisGenerationId = ++_currentGenerationId;
-
+  /// Updates settings immediately without triggering expensive puzzle generation.
+  void updateSettings(Difficulty difficulty, int codeLength) {
     state = state.copyWith(
       selectedDifficulty: difficulty,
       selectedCodeLength: codeLength,
+    );
+  }
+
+  /// Triggers the actual puzzle generation when the player starts the game.
+  Future<void> startNewGame() async {
+    final thisGenerationId = ++_currentGenerationId;
+    final diff = state.selectedDifficulty;
+    final length = state.selectedCodeLength;
+
+    state = state.copyWith(
       isGenerating: true, 
       feedback: 'Generating puzzle...',
+      puzzle: null, // Clear old puzzle for clean start
+      status: GameStatus.playing,
     );
 
     try {
       final puzzle = await Isolate.run(
         () => CodeDeducerGenerator.generate(
-          difficulty,
-          codeLength,
+          diff,
+          length,
           allowDuplicates: false, 
         ),
       );
@@ -104,9 +111,9 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
         state = CodeDeducerState(
           puzzle: puzzle,
           status: GameStatus.playing,
-          feedback: 'Crack the $codeLength-digit code!',
-          selectedDifficulty: difficulty,
-          selectedCodeLength: codeLength,
+          feedback: 'Crack the $length-digit code!',
+          selectedDifficulty: diff,
+          selectedCodeLength: length,
           guessCount: 0,
           isGenerating: false,
           attemptsRemaining: CodeDeducerConstants.maxAttempts,
@@ -128,7 +135,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   void submitGuess(String guess) {
     final cleanGuess = guess.trim();
     
-    // Safety check: input must be strictly valid to count as an attempt
     if (state.status != GameStatus.playing || state.puzzle == null || state.isGenerating) return;
     final puzzle = state.puzzle!;
     if (cleanGuess.length != puzzle.codeLength) return;
@@ -136,7 +142,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     final currentAttempt = state.attemptsUsed + 1;
 
     if (cleanGuess == puzzle.secretCode) {
-      // Victory
       final xp = CodeDeducerConstants.calculateXp(puzzle.difficulty, currentAttempt);
       state = state.copyWith(
         status: GameStatus.won,
@@ -147,11 +152,9 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
         earnedXp: xp,
       );
     } else {
-      // Incorrect valid guess
       final remaining = state.attemptsRemaining - 1;
       
       if (remaining <= 0) {
-        // Game Over
         state = state.copyWith(
           status: GameStatus.lost,
           feedback: 'Game Over! The code was ${puzzle.secretCode}.',
@@ -162,7 +165,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
           earnedXp: 0,
         );
       } else {
-        // Continue Playing
         state = state.copyWith(
           feedback: '$cleanGuess is incorrect. Try again!',
           guessCount: state.guessCount + 1,
