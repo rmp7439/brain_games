@@ -1,6 +1,7 @@
 import 'dart:isolate';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/game_constants.dart';
 import '../logic/generator.dart';
 import '../models/puzzle.dart';
 
@@ -14,6 +15,13 @@ class CodeDeducerState {
   final int selectedCodeLength;
   final int guessCount; 
   final bool isGenerating;
+  
+  // Player State Extensions
+  final int attemptsRemaining;
+  final int attemptsUsed;
+  final DateTime? startTime;
+  final DateTime? endTime;
+  final int earnedXp;
 
   const CodeDeducerState({
     this.puzzle,
@@ -23,7 +31,17 @@ class CodeDeducerState {
     this.selectedCodeLength = 3,
     this.guessCount = 0,
     this.isGenerating = false,
+    this.attemptsRemaining = CodeDeducerConstants.maxAttempts,
+    this.attemptsUsed = 0,
+    this.startTime,
+    this.endTime,
+    this.earnedXp = 0,
   });
+
+  // Getters for external statistics tracking
+  Duration? get completionTime => (startTime != null && endTime != null) ? endTime!.difference(startTime!) : null;
+  bool get isGameOver => status == GameStatus.lost;
+  bool get isSolved => status == GameStatus.won;
 
   CodeDeducerState copyWith({
     Puzzle? puzzle,
@@ -33,6 +51,11 @@ class CodeDeducerState {
     int? selectedCodeLength,
     int? guessCount,
     bool? isGenerating,
+    int? attemptsRemaining,
+    int? attemptsUsed,
+    DateTime? startTime,
+    DateTime? endTime,
+    int? earnedXp,
   }) {
     return CodeDeducerState(
       puzzle: puzzle ?? this.puzzle,
@@ -42,6 +65,11 @@ class CodeDeducerState {
       selectedCodeLength: selectedCodeLength ?? this.selectedCodeLength,
       guessCount: guessCount ?? this.guessCount,
       isGenerating: isGenerating ?? this.isGenerating,
+      attemptsRemaining: attemptsRemaining ?? this.attemptsRemaining,
+      attemptsUsed: attemptsUsed ?? this.attemptsUsed,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      earnedXp: earnedXp ?? this.earnedXp,
     );
   }
 }
@@ -56,7 +84,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   Future<void> startNewGame(Difficulty difficulty, int codeLength) async {
     final thisGenerationId = ++_currentGenerationId;
 
-    // Acknowledge tap immediately without dropping the current puzzle
     state = state.copyWith(
       selectedDifficulty: difficulty,
       selectedCodeLength: codeLength,
@@ -74,7 +101,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
       );
 
       if (_currentGenerationId == thisGenerationId) {
-        // Build a fresh state to reset the board completely
         state = CodeDeducerState(
           puzzle: puzzle,
           status: GameStatus.playing,
@@ -83,6 +109,9 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
           selectedCodeLength: codeLength,
           guessCount: 0,
           isGenerating: false,
+          attemptsRemaining: CodeDeducerConstants.maxAttempts,
+          attemptsUsed: 0,
+          startTime: DateTime.now(), 
         );
       }
     } catch (e) {
@@ -99,29 +128,48 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
   void submitGuess(String guess) {
     final cleanGuess = guess.trim();
     
+    // Safety check: input must be strictly valid to count as an attempt
     if (state.status != GameStatus.playing || state.puzzle == null || state.isGenerating) return;
-    
     final puzzle = state.puzzle!;
-    
-    if (cleanGuess.length != puzzle.codeLength) {
-      state = state.copyWith(
-        feedback: 'Code must be ${puzzle.codeLength} digits.',
-        guessCount: state.guessCount + 1, 
-      );
-      return;
-    }
+    if (cleanGuess.length != puzzle.codeLength) return;
+
+    final currentAttempt = state.attemptsUsed + 1;
 
     if (cleanGuess == puzzle.secretCode) {
+      // Victory
+      final xp = CodeDeducerConstants.calculateXp(puzzle.difficulty, currentAttempt);
       state = state.copyWith(
         status: GameStatus.won,
         feedback: 'Correct! The code was $cleanGuess.',
         guessCount: state.guessCount + 1,
+        attemptsUsed: currentAttempt,
+        endTime: DateTime.now(),
+        earnedXp: xp,
       );
     } else {
-      state = state.copyWith(
-        feedback: '$cleanGuess is incorrect. Try again!',
-        guessCount: state.guessCount + 1, 
-      );
+      // Incorrect valid guess
+      final remaining = state.attemptsRemaining - 1;
+      
+      if (remaining <= 0) {
+        // Game Over
+        state = state.copyWith(
+          status: GameStatus.lost,
+          feedback: 'Game Over! The code was ${puzzle.secretCode}.',
+          guessCount: state.guessCount + 1,
+          attemptsRemaining: 0,
+          attemptsUsed: currentAttempt,
+          endTime: DateTime.now(),
+          earnedXp: 0,
+        );
+      } else {
+        // Continue Playing
+        state = state.copyWith(
+          feedback: '$cleanGuess is incorrect. Try again!',
+          guessCount: state.guessCount + 1,
+          attemptsRemaining: remaining,
+          attemptsUsed: currentAttempt,
+        );
+      }
     }
   }
 }
