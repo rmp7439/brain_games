@@ -19,8 +19,16 @@ class HeartIndicator extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(left: 4.0),
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+            duration: const Duration(milliseconds: 400),
+            switchInCurve: Curves.easeOutBack,
+            switchOutCurve: Curves.easeInBack,
+            transitionBuilder: (child, anim) => ScaleTransition(
+              scale: Tween<double>(begin: 0.5, end: 1.0).animate(anim),
+              child: FadeTransition(
+                opacity: anim,
+                child: child,
+              ),
+            ),
             child: Icon(
               isFull ? Icons.favorite : Icons.favorite_border,
               key: ValueKey(isFull),

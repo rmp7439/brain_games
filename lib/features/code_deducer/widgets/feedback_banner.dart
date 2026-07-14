@@ -28,7 +28,8 @@ class FeedbackBanner extends StatelessWidget {
     }
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
       decoration: BoxDecoration(
         color: bgColor,
@@ -36,7 +37,21 @@ class FeedbackBanner extends StatelessWidget {
       ),
       child: Center(
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeOutBack,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.0, -0.2), 
+                  end: Offset.zero
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
           child: Text(
             feedback.isEmpty ? 'Ready for your first guess.' : feedback,
             key: ValueKey('${feedback}_$guessCount'),

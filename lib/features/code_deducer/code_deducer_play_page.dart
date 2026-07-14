@@ -156,7 +156,21 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
         ),
       ),
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
+        duration: const Duration(milliseconds: 500),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, 0.05),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
         child: (state.puzzle == null || state.isGenerating)
             ? const Center(
                 key: ValueKey('loading'),
@@ -394,9 +408,26 @@ class _GuessHistoryList extends StatelessWidget {
       itemBuilder: (context, index) {
         final guess = reversedHistory[index];
         final attemptNumber = history.length - index;
-        return GuessHistoryCard(
-          guess: guess, 
-          attemptNumber: attemptNumber,
+        
+        return TweenAnimationBuilder<double>(
+          // Include attemptNumber in key to guarantee uniqueness in case of duplicate guesses
+          key: ValueKey('${guess}_$attemptNumber'), 
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            );
+          },
+          child: GuessHistoryCard(
+            guess: guess, 
+            attemptNumber: attemptNumber,
+          ),
         );
       },
     );
