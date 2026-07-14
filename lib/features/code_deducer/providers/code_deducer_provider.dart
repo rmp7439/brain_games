@@ -21,6 +21,9 @@ class CodeDeducerState {
   final DateTime? startTime;
   final DateTime? endTime;
   final int earnedXp;
+  
+  // ADDED: Track previous guesses for the new UI flow
+  final List<String> guessHistory;
 
   const CodeDeducerState({
     this.puzzle,
@@ -35,6 +38,7 @@ class CodeDeducerState {
     this.startTime,
     this.endTime,
     this.earnedXp = 0,
+    this.guessHistory = const [],
   });
 
   Duration? get completionTime => (startTime != null && endTime != null) ? endTime!.difference(startTime!) : null;
@@ -54,6 +58,7 @@ class CodeDeducerState {
     DateTime? startTime,
     DateTime? endTime,
     int? earnedXp,
+    List<String>? guessHistory,
   }) {
     return CodeDeducerState(
       puzzle: puzzle ?? this.puzzle,
@@ -68,6 +73,7 @@ class CodeDeducerState {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       earnedXp: earnedXp ?? this.earnedXp,
+      guessHistory: guessHistory ?? this.guessHistory,
     );
   }
 }
@@ -77,7 +83,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
 
   CodeDeducerNotifier() : super(const CodeDeducerState());
 
-  /// Updates settings immediately without triggering expensive puzzle generation.
   void updateSettings(Difficulty difficulty, int codeLength) {
     state = state.copyWith(
       selectedDifficulty: difficulty,
@@ -85,7 +90,6 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     );
   }
 
-  /// Triggers the actual puzzle generation when the player starts the game.
   Future<void> startNewGame() async {
     final thisGenerationId = ++_currentGenerationId;
     final diff = state.selectedDifficulty;
@@ -94,7 +98,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     state = state.copyWith(
       isGenerating: true, 
       feedback: 'Generating puzzle...',
-      puzzle: null, // Clear old puzzle for clean start
+      puzzle: null, 
       status: GameStatus.playing,
     );
 
@@ -119,6 +123,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
           attemptsRemaining: CodeDeducerConstants.maxAttempts,
           attemptsUsed: 0,
           startTime: DateTime.now(), 
+          guessHistory: const [], // Reset history on new game
         );
       }
     } catch (e) {
@@ -140,6 +145,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     if (cleanGuess.length != puzzle.codeLength) return;
 
     final currentAttempt = state.attemptsUsed + 1;
+    final newGuessHistory = List<String>.from(state.guessHistory)..add(cleanGuess);
 
     if (cleanGuess == puzzle.secretCode) {
       final xp = CodeDeducerConstants.calculateXp(puzzle.difficulty, currentAttempt);
@@ -150,6 +156,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
         attemptsUsed: currentAttempt,
         endTime: DateTime.now(),
         earnedXp: xp,
+        guessHistory: newGuessHistory,
       );
     } else {
       final remaining = state.attemptsRemaining - 1;
@@ -163,6 +170,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
           attemptsUsed: currentAttempt,
           endTime: DateTime.now(),
           earnedXp: 0,
+          guessHistory: newGuessHistory,
         );
       } else {
         state = state.copyWith(
@@ -170,6 +178,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
           guessCount: state.guessCount + 1,
           attemptsRemaining: remaining,
           attemptsUsed: currentAttempt,
+          guessHistory: newGuessHistory,
         );
       }
     }

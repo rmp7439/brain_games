@@ -7,8 +7,6 @@ import 'constants/game_constants.dart';
 import 'models/clue.dart';
 import 'providers/code_deducer_provider.dart';
 
-/// Screen 2: Puzzle Screen
-/// Completely dedicated to the gameplay experience, removing all setup clutter.
 class CodeDeducerPlayPage extends ConsumerStatefulWidget {
   const CodeDeducerPlayPage({super.key});
 
@@ -18,16 +16,19 @@ class CodeDeducerPlayPage extends ConsumerStatefulWidget {
 
 class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
   late TextEditingController _textController;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _textController = TextEditingController();
+    _pageController = PageController();
   }
 
   @override
   void dispose() {
     _textController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -105,7 +106,7 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop(); 
-                    context.pop(); // Pop back to Setup Screen with preserved state
+                    context.pop(); 
                   },
                   child: const Text('Play Again'),
                 ),
@@ -143,24 +144,22 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(), // Pop safely back to setup
+          onPressed: () => context.pop(), 
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          child: (state.puzzle == null || state.isGenerating)
-              ? const Center(
-                  key: ValueKey('loading'),
-                  child: CircularProgressIndicator(),
-                )
-              : _GameBoardContent(
-                  key: ValueKey(state.puzzle),
-                  state: state,
-                  textController: _textController,
-                ),
-        ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        child: (state.puzzle == null || state.isGenerating)
+            ? const Center(
+                key: ValueKey('loading'),
+                child: CircularProgressIndicator(),
+              )
+            : _GameBoardContent(
+                key: ValueKey(state.puzzle),
+                state: state,
+                textController: _textController,
+                pageController: _pageController,
+              ),
       ),
     );
   }
@@ -169,30 +168,98 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
 class _GameBoardContent extends ConsumerWidget {
   final CodeDeducerState state;
   final TextEditingController textController;
+  final PageController pageController;
 
   const _GameBoardContent({
     super.key,
     required this.state,
     required this.textController,
+    required this.pageController,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      children: [
+        Expanded(
+          child: PageView(
+            controller: pageController,
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _CluesPage(state: state),
+              _GuessPage(state: state, textController: textController),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 24.0, top: 12.0),
+          child: _PageIndicator(pageController: pageController),
+        ),
+      ],
+    );
+  }
+}
+
+class _CluesPage extends StatelessWidget {
+  final CodeDeducerState state;
+
+  const _CluesPage({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const Text(
+            'STUDY THE CLUES',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 16),
           ListView.builder(
-            shrinkWrap: true, 
-            physics: const NeverScrollableScrollPhysics(), 
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: state.puzzle!.clues.length,
             itemBuilder: (context, index) {
               final clue = state.puzzle!.clues[index];
               return _StaggeredClueCard(clue: clue, index: index);
             },
           ),
-          const SizedBox(height: 24),
-          
+          const SizedBox(height: 32),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Swipe for Guess Page', style: TextStyle(color: Colors.grey, fontSize: 14)),
+              SizedBox(width: 8),
+              Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuessPage extends ConsumerWidget {
+  final CodeDeducerState state;
+  final TextEditingController textController;
+
+  const _GuessPage({required this.state, required this.textController});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           _HeartsDisplay(
             attemptsRemaining: state.attemptsRemaining, 
             maxAttempts: CodeDeducerConstants.maxAttempts
@@ -212,7 +279,7 @@ class _GameBoardContent extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           
           TextField(
             controller: textController,
@@ -252,8 +319,74 @@ class _GameBoardContent extends ConsumerWidget {
               );
             },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 32),
+
+          if (state.guessHistory.isNotEmpty) ...[
+            const Text(
+              'PREVIOUS GUESSES',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              alignment: WrapAlignment.center,
+              children: state.guessHistory.map((guess) {
+                return Chip(
+                  label: Text(
+                    guess,
+                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2.0),
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  side: BorderSide.none,
+                );
+              }).toList(),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _PageIndicator extends StatelessWidget {
+  final PageController pageController;
+
+  const _PageIndicator({required this.pageController});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: pageController,
+      builder: (context, child) {
+        final page = pageController.hasClients ? (pageController.page ?? 0.0) : 0.0;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildDot(context, page, 0),
+            const SizedBox(width: 8),
+            _buildDot(context, page, 1),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDot(BuildContext context, double currentPage, int index) {
+    final isActive = (currentPage.round() == index);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: isActive ? 24 : 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: isActive ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
