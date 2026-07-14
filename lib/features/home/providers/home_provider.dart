@@ -62,8 +62,8 @@ class HomeNotifier extends AsyncNotifier<HomeState> {
       final challenge = await repository.getDailyChallenge(info.id);
 
       final hasDailyBadge = challenge != null && challenge.available && !challenge.completed;
-      final safeStats = stats ?? const GameStats(gamesPlayed: 0, wins: 0, losses: 0, winRate: 0, bestScore: 0, currentRating: 0, highestRating: 0, totalPlayTime: Duration.zero);
-      final safeProgress = progress ?? const GameProgress(unlocked: false, completedTutorial: false, currentLevel: 1, xpEarned: 0, streak: 0);
+      final safeStats = stats ?? const GameStats(gamesPlayed: 0, wins: 0, losses: 0, winRate: 0.0, bestScore: 0, currentRating: 0, highestRating: 0, totalPlayTime: Duration.zero, averageAttempts: 0.0, fastestSolve: null);
+      final safeProgress = progress ?? const GameProgress(unlocked: false, completedTutorial: false, currentLevel: 1, xpEarned: 0, streak: 0, longestStreak: 0);
 
       totalGamesPlayed += safeStats.gamesPlayed;
       overallXP += safeProgress.xpEarned;
@@ -96,7 +96,6 @@ class HomeNotifier extends AsyncNotifier<HomeState> {
       }
     }
 
-    // Default 'Continue Playing' if no games played yet
     continuePlaying ??= allGames.isNotEmpty ? allGames.first : null;
 
     return HomeState(

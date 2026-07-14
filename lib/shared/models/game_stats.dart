@@ -10,6 +10,8 @@ class GameStats {
   final int currentRating;
   final int highestRating;
   final Duration totalPlayTime;
+  final double averageAttempts;
+  final Duration? fastestSolve;
 
   const GameStats({
     required this.gamesPlayed,
@@ -20,6 +22,8 @@ class GameStats {
     required this.currentRating,
     required this.highestRating,
     required this.totalPlayTime,
+    required this.averageAttempts,
+    this.fastestSolve,
   });
 
   GameStats copyWith({
@@ -31,6 +35,8 @@ class GameStats {
     int? currentRating,
     int? highestRating,
     Duration? totalPlayTime,
+    double? averageAttempts,
+    Duration? fastestSolve,
   }) {
     return GameStats(
       gamesPlayed: gamesPlayed ?? this.gamesPlayed,
@@ -41,6 +47,8 @@ class GameStats {
       currentRating: currentRating ?? this.currentRating,
       highestRating: highestRating ?? this.highestRating,
       totalPlayTime: totalPlayTime ?? this.totalPlayTime,
+      averageAttempts: averageAttempts ?? this.averageAttempts,
+      fastestSolve: fastestSolve ?? this.fastestSolve,
     );
   }
 
@@ -55,7 +63,9 @@ class GameStats {
         other.bestScore == bestScore &&
         other.currentRating == currentRating &&
         other.highestRating == highestRating &&
-        other.totalPlayTime == totalPlayTime;
+        other.totalPlayTime == totalPlayTime &&
+        other.averageAttempts == averageAttempts &&
+        other.fastestSolve == fastestSolve;
   }
 
   @override
@@ -69,6 +79,8 @@ class GameStats {
       currentRating,
       highestRating,
       totalPlayTime,
+      averageAttempts,
+      fastestSolve,
     );
   }
 }

@@ -7,6 +7,7 @@ class GameProgress {
   final int currentLevel;
   final int xpEarned;
   final int streak;
+  final int longestStreak;
 
   const GameProgress({
     required this.unlocked,
@@ -14,6 +15,7 @@ class GameProgress {
     required this.currentLevel,
     required this.xpEarned,
     required this.streak,
+    required this.longestStreak,
   });
 
   GameProgress copyWith({
@@ -22,6 +24,7 @@ class GameProgress {
     int? currentLevel,
     int? xpEarned,
     int? streak,
+    int? longestStreak,
   }) {
     return GameProgress(
       unlocked: unlocked ?? this.unlocked,
@@ -29,6 +32,7 @@ class GameProgress {
       currentLevel: currentLevel ?? this.currentLevel,
       xpEarned: xpEarned ?? this.xpEarned,
       streak: streak ?? this.streak,
+      longestStreak: longestStreak ?? this.longestStreak,
     );
   }
 
@@ -40,7 +44,8 @@ class GameProgress {
         other.completedTutorial == completedTutorial &&
         other.currentLevel == currentLevel &&
         other.xpEarned == xpEarned &&
-        other.streak == streak;
+        other.streak == streak &&
+        other.longestStreak == longestStreak;
   }
 
   @override
@@ -51,6 +56,7 @@ class GameProgress {
       currentLevel,
       xpEarned,
       streak,
+      longestStreak,
     );
   }
 }

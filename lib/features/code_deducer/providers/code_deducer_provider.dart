@@ -1,6 +1,10 @@
 import 'dart:isolate';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/models/game_progress.dart';
+import '../../../shared/models/game_stats.dart';
+import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/repositories/game_repository.dart';
 import '../constants/game_constants.dart';
 import '../logic/generator.dart';
 import '../models/puzzle.dart';
@@ -13,16 +17,16 @@ class CodeDeducerState {
   final String feedback;
   final Difficulty selectedDifficulty;
   final int selectedCodeLength;
-  final int guessCount; 
+  final int guessCount;
   final bool isGenerating;
-  
+
   final int attemptsRemaining;
   final int attemptsUsed;
   final DateTime? startTime;
   final DateTime? endTime;
   final int earnedXp;
-  
-  final List<String> guessHistory; // ADDED: Tracks previous guesses for the UI
+
+  final List<String> guessHistory;
 
   const CodeDeducerState({
     this.puzzle,
@@ -40,7 +44,9 @@ class CodeDeducerState {
     this.guessHistory = const [],
   });
 
-  Duration? get completionTime => (startTime != null && endTime != null) ? endTime!.difference(startTime!) : null;
+  Duration? get completionTime => (startTime != null && endTime != null)
+      ? endTime!.difference(startTime!)
+      : null;
   bool get isGameOver => status == GameStatus.lost;
   bool get isSolved => status == GameStatus.won;
 
@@ -78,9 +84,11 @@ class CodeDeducerState {
 }
 
 class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
-  int _currentGenerationId = 0; 
+  final GameRepository repository;
+  int _currentGenerationId = 0;
 
-  CodeDeducerNotifier() : super(const CodeDeducerState());
+  CodeDeducerNotifier({required this.repository})
+      : super(const CodeDeducerState());
 
   void updateSettings(Difficulty difficulty, int codeLength) {
     state = state.copyWith(
@@ -95,9 +103,9 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     final length = state.selectedCodeLength;
 
     state = state.copyWith(
-      isGenerating: true, 
+      isGenerating: true,
       feedback: 'Generating puzzle...',
-      puzzle: null, 
+      puzzle: null,
       status: GameStatus.playing,
     );
 
@@ -106,7 +114,7 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
         () => CodeDeducerGenerator.generate(
           diff,
           length,
-          allowDuplicates: false, 
+          allowDuplicates: false,
         ),
       );
 
@@ -121,8 +129,8 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
           isGenerating: false,
           attemptsRemaining: CodeDeducerConstants.maxAttempts,
           attemptsUsed: 0,
-          startTime: DateTime.now(), 
-          guessHistory: const [], // Reset history on new game
+          startTime: DateTime.now(),
+          guessHistory: const [],
         );
       }
     } catch (e) {
@@ -138,41 +146,53 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
 
   void submitGuess(String guess) {
     final cleanGuess = guess.trim();
+
+    if (state.status != GameStatus.playing ||
+        state.puzzle == null ||
+        state.isGenerating) {
+      return;
+    }
     
-    if (state.status != GameStatus.playing || state.puzzle == null || state.isGenerating) return;
     final puzzle = state.puzzle!;
     if (cleanGuess.length != puzzle.codeLength) return;
 
     final currentAttempt = state.attemptsUsed + 1;
-    
-    // Create updated history list
-    final newGuessHistory = List<String>.from(state.guessHistory)..add(cleanGuess);
+    final newGuessHistory = List<String>.from(state.guessHistory)
+      ..add(cleanGuess);
 
     if (cleanGuess == puzzle.secretCode) {
-      final xp = CodeDeducerConstants.calculateXp(puzzle.difficulty, currentAttempt);
+      final xp =
+          CodeDeducerConstants.calculateXp(puzzle.difficulty, currentAttempt);
+      final endTime = DateTime.now();
+
       state = state.copyWith(
         status: GameStatus.won,
         feedback: 'Correct! The code was $cleanGuess.',
         guessCount: state.guessCount + 1,
         attemptsUsed: currentAttempt,
-        endTime: DateTime.now(),
+        endTime: endTime,
         earnedXp: xp,
         guessHistory: newGuessHistory,
       );
+
+      _updatePersistence(true, currentAttempt, state.completionTime, xp);
     } else {
       final remaining = state.attemptsRemaining - 1;
-      
+
       if (remaining <= 0) {
+        final endTime = DateTime.now();
         state = state.copyWith(
           status: GameStatus.lost,
           feedback: 'Game Over! The code was ${puzzle.secretCode}.',
           guessCount: state.guessCount + 1,
           attemptsRemaining: 0,
           attemptsUsed: currentAttempt,
-          endTime: DateTime.now(),
+          endTime: endTime,
           earnedXp: 0,
           guessHistory: newGuessHistory,
         );
+
+        _updatePersistence(false, currentAttempt, state.completionTime, 0);
       } else {
         state = state.copyWith(
           feedback: '$cleanGuess is incorrect. Try again!',
@@ -184,8 +204,90 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
       }
     }
   }
+
+  Future<void> _updatePersistence(
+      bool isWin, int attempts, Duration? timeTaken, int xpEarned) async {
+    try {
+      const gameId = 'code_deducer';
+      final stats = await repository.getGameStats(gameId);
+      final progress = await repository.getGameProgress(gameId);
+
+      final currentStats = stats ??
+          const GameStats(
+            gamesPlayed: 0,
+            wins: 0,
+            losses: 0,
+            winRate: 0.0,
+            bestScore: 0,
+            currentRating: 0,
+            highestRating: 0,
+            totalPlayTime: Duration.zero,
+            averageAttempts: 0.0,
+            fastestSolve: null,
+          );
+
+      final currentProgress = progress ??
+          const GameProgress(
+            unlocked: true,
+            completedTutorial: false,
+            currentLevel: 1,
+            xpEarned: 0,
+            streak: 0,
+            longestStreak: 0,
+          );
+
+      final gamesPlayed = currentStats.gamesPlayed + 1;
+      final wins = currentStats.wins + (isWin ? 1 : 0);
+      final losses = currentStats.losses + (isWin ? 0 : 1);
+      final winRate = gamesPlayed > 0 ? wins / gamesPlayed : 0.0;
+
+      final double newAvgAttempts =
+          ((currentStats.averageAttempts * currentStats.gamesPlayed) +
+                  attempts) /
+              gamesPlayed;
+
+      Duration? newFastestSolve = currentStats.fastestSolve;
+      if (isWin && timeTaken != null) {
+        if (newFastestSolve == null || timeTaken < newFastestSolve) {
+          newFastestSolve = timeTaken;
+        }
+      }
+
+      final totalPlayTime =
+          currentStats.totalPlayTime + (timeTaken ?? Duration.zero);
+
+      final newStats = currentStats.copyWith(
+        gamesPlayed: gamesPlayed,
+        wins: wins,
+        losses: losses,
+        winRate: winRate,
+        averageAttempts: newAvgAttempts,
+        fastestSolve: newFastestSolve,
+        totalPlayTime: totalPlayTime,
+      );
+
+      final currentStreak = isWin ? currentProgress.streak + 1 : 0;
+      final longestStreak = currentStreak > currentProgress.longestStreak
+          ? currentStreak
+          : currentProgress.longestStreak;
+      final newXp = currentProgress.xpEarned + xpEarned;
+
+      final newProgress = currentProgress.copyWith(
+        streak: currentStreak,
+        longestStreak: longestStreak,
+        xpEarned: newXp,
+      );
+
+      await repository.updateGameStats(gameId, newStats);
+      await repository.updateGameProgress(gameId, newProgress);
+    } catch (e) {
+      // Intentionally ignoring persistent layer exceptions to protect active UI experience
+    }
+  }
 }
 
-final codeDeducerProvider = StateNotifierProvider<CodeDeducerNotifier, CodeDeducerState>((ref) {
-  return CodeDeducerNotifier();
+final codeDeducerProvider =
+    StateNotifierProvider<CodeDeducerNotifier, CodeDeducerState>((ref) {
+  final repository = ref.watch(gameRepositoryProvider);
+  return CodeDeducerNotifier(repository: repository);
 });

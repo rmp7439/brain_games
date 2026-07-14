@@ -26,6 +26,7 @@ class MockGameRepository implements GameRepository {
       currentLevel: 1,
       xpEarned: 0,
       streak: 0,
+      longestStreak: 0,
     ),
   };
 
@@ -64,6 +65,8 @@ class MockGameRepository implements GameRepository {
           currentRating: 0,
           highestRating: 0,
           totalPlayTime: Duration.zero,
+          averageAttempts: 0.0,
+          fastestSolve: null,
         );
   }
 
@@ -89,6 +92,7 @@ class MockGameRepository implements GameRepository {
           currentLevel: 1,
           xpEarned: 0,
           streak: 0,
+          longestStreak: 0,
         );
   }
 
