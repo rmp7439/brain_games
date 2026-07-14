@@ -14,6 +14,7 @@ import 'widgets/clue_card.dart';
 import 'widgets/empty_history_state.dart';
 import 'widgets/feedback_banner.dart';
 import 'widgets/guess_history_card.dart';
+import 'widgets/victory_screen.dart';
 
 class CodeDeducerPlayPage extends ConsumerStatefulWidget {
   const CodeDeducerPlayPage({super.key});
@@ -47,7 +48,7 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
     return '$m:$s';
   }
 
-  void _showEndGameDialog(CodeDeducerState state, bool isWin) {
+  void _showLossDialog(CodeDeducerState state) {
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
@@ -61,46 +62,27 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
             opacity: anim1.value,
             child: AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Row(
+              title: const Row(
                 children: [
-                  Icon(
-                    isWin ? Icons.emoji_events : Icons.videogame_asset_off,
-                    color: isWin ? Colors.amber : Colors.red,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isWin ? 'Congratulations!' : 'Game Over',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Icon(Icons.videogame_asset_off, color: Colors.red, size: 28),
+                  SizedBox(width: 8),
+                  Text('Game Over', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (!isWin) ...[
-                    Text(
-                      'The code was: ${state.puzzle?.secretCode}',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                  Text(
+                    'The code was: ${state.puzzle?.secretCode}',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
                   DialogStatRow(label: 'Difficulty', value: state.selectedDifficulty.name.toUpperCase()),
                   DialogStatRow(label: 'Code Length', value: '${state.selectedCodeLength} Digits'),
                   DialogStatRow(label: 'Attempts Used', value: '${state.attemptsUsed}/${CodeDeducerConstants.maxAttempts}'),
-                  if (isWin) DialogStatRow(label: 'Attempts Remaining', value: '${state.attemptsRemaining}'),
                   DialogStatRow(label: 'Completion Time', value: _formatTime(state.completionTime)),
-                  if (isWin) ...[
-                    const Divider(height: 24),
-                    DialogStatRow(
-                      label: 'XP Earned',
-                      value: '+${state.earnedXp}',
-                      valueColor: Colors.green,
-                      isBold: true,
-                    ),
-                  ],
                 ],
               ),
               actions: [
@@ -126,15 +108,38 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
     );
   }
 
+  void _showVictoryScreen(CodeDeducerState state) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Theme.of(context).colorScheme.surface, // Uses the app surface color to behave like a full screen
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) => VictoryScreen(state: state),
+      transitionBuilder: (context, anim1, anim2, child) {
+        final curve = CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curve,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.05), 
+              end: Offset.zero
+            ).animate(curve),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(codeDeducerProvider);
 
     ref.listen<CodeDeducerState>(codeDeducerProvider, (previous, next) {
       if (previous?.status == GameStatus.playing && next.status == GameStatus.won) {
-        _showEndGameDialog(next, true);
+        _showVictoryScreen(next);
       } else if (previous?.status == GameStatus.playing && next.status == GameStatus.lost) {
-        _showEndGameDialog(next, false);
+        _showLossDialog(next);
       }
     });
 
@@ -410,7 +415,6 @@ class _GuessHistoryList extends StatelessWidget {
         final attemptNumber = history.length - index;
         
         return TweenAnimationBuilder<double>(
-          // Include attemptNumber in key to guarantee uniqueness in case of duplicate guesses
           key: ValueKey('${guess}_$attemptNumber'), 
           tween: Tween(begin: 0.0, end: 1.0),
           duration: const Duration(milliseconds: 400),
