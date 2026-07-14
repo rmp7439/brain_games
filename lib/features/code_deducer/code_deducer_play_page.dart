@@ -200,6 +200,10 @@ class _GameBoardContent extends ConsumerWidget {
   }
 }
 
+// -----------------------------------------------------------------------------
+// CLUES PAGE (Preserved from Phase 2)
+// -----------------------------------------------------------------------------
+
 class _CluesPage extends StatelessWidget {
   final CodeDeducerState state;
 
@@ -268,181 +272,6 @@ class _CluesPage extends StatelessWidget {
           const SizedBox(height: 32),
         ],
       ),
-    );
-  }
-}
-
-class _GuessPage extends ConsumerWidget {
-  final CodeDeducerState state;
-  final TextEditingController textController;
-
-  const _GuessPage({required this.state, required this.textController});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _HeartsDisplay(
-            attemptsRemaining: state.attemptsRemaining, 
-            maxAttempts: CodeDeducerConstants.maxAttempts
-          ),
-          const SizedBox(height: 16),
-          
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Text(
-              state.feedback,
-              key: ValueKey('${state.feedback}_${state.guessCount}'), 
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: state.status == GameStatus.won ? Colors.green : Colors.red,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          TextField(
-            controller: textController,
-            keyboardType: TextInputType.number,
-            maxLength: state.puzzle!.codeLength,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              labelText: 'Enter ${state.puzzle!.codeLength}-digit code',
-              filled: true,
-              counterText: '', 
-            ),
-            enabled: state.status == GameStatus.playing,
-          ),
-          const SizedBox(height: 16),
-          
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: textController,
-            builder: (context, value, child) {
-              final isValidLength = value.text.length == state.puzzle!.codeLength;
-              final isPlaying = state.status == GameStatus.playing;
-              final canSubmit = isValidLength && isPlaying;
-
-              return ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: canSubmit ? () {
-                  HapticFeedback.mediumImpact();
-                  final guess = textController.text.trim();
-                  ref.read(codeDeducerProvider.notifier).submitGuess(guess);
-                  textController.clear();
-                  FocusScope.of(context).unfocus();
-                } : null,
-                child: const Text('SUBMIT GUESS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-              );
-            },
-          ),
-          const SizedBox(height: 32),
-
-          if (state.guessHistory.isNotEmpty) ...[
-            const Text(
-              'PREVIOUS GUESSES',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              alignment: WrapAlignment.center,
-              children: state.guessHistory.map((guess) {
-                return Chip(
-                  label: Text(
-                    guess,
-                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2.0),
-                  ),
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  side: BorderSide.none,
-                );
-              }).toList(),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _PageIndicator extends StatelessWidget {
-  final PageController pageController;
-
-  const _PageIndicator({required this.pageController});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: pageController,
-      builder: (context, child) {
-        final page = pageController.hasClients ? (pageController.page ?? 0.0) : 0.0;
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildDot(context, page, 0),
-            const SizedBox(width: 8),
-            _buildDot(context, page, 1),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDot(BuildContext context, double currentPage, int index) {
-    final isActive = (currentPage.round() == index);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: isActive ? 24 : 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: isActive ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-}
-
-class _HeartsDisplay extends StatelessWidget {
-  final int attemptsRemaining;
-  final int maxAttempts;
-
-  const _HeartsDisplay({required this.attemptsRemaining, required this.maxAttempts});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(maxAttempts, (index) {
-        final isFull = index < attemptsRemaining;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-            child: Icon(
-              isFull ? Icons.favorite : Icons.favorite_border,
-              key: ValueKey(isFull),
-              color: isFull ? Colors.red : Colors.grey.shade400,
-              size: 36,
-            ),
-          ),
-        );
-      }),
     );
   }
 }
@@ -521,6 +350,332 @@ class _StaggeredClueCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// GUESS PAGE (Redesigned for Phase 3)
+// -----------------------------------------------------------------------------
+
+class _GuessPage extends ConsumerWidget {
+  final CodeDeducerState state;
+  final TextEditingController textController;
+
+  const _GuessPage({required this.state, required this.textController});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _FeedbackBanner(state: state),
+          const SizedBox(height: 32),
+          
+          TextField(
+            controller: textController,
+            keyboardType: TextInputType.number,
+            maxLength: state.puzzle!.codeLength,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 8.0,
+            ),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: 'ENTER ${state.puzzle!.codeLength} DIGITS',
+              labelStyle: const TextStyle(letterSpacing: 2.0),
+              filled: true,
+              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              counterText: '', 
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(
+                  color: theme.colorScheme.primary, 
+                  width: 2,
+                ),
+              ),
+            ),
+            enabled: state.status == GameStatus.playing,
+          ),
+          const SizedBox(height: 24),
+          
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: textController,
+            builder: (context, value, child) {
+              final isValidLength = value.text.length == state.puzzle!.codeLength;
+              final isPlaying = state.status == GameStatus.playing;
+              final canSubmit = isValidLength && isPlaying;
+
+              return ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(64),
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: canSubmit ? 4 : 0,
+                ),
+                onPressed: canSubmit ? () {
+                  HapticFeedback.mediumImpact();
+                  final guess = textController.text.trim();
+                  ref.read(codeDeducerProvider.notifier).submitGuess(guess);
+                  textController.clear();
+                  FocusScope.of(context).unfocus();
+                } : null,
+                child: const Text('SUBMIT GUESS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+              );
+            },
+          ),
+          const SizedBox(height: 48),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'ATTEMPTS',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              _HeartsDisplay(
+                attemptsRemaining: state.attemptsRemaining, 
+                maxAttempts: CodeDeducerConstants.maxAttempts
+              ),
+            ],
+          ),
+          const Divider(height: 32),
+
+          if (state.guessHistory.isEmpty)
+            const _EmptyHistoryState()
+          else
+            _GuessHistoryList(history: state.guessHistory),
+            
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackBanner extends StatelessWidget {
+  final CodeDeducerState state;
+  const _FeedbackBanner({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isPlaying = state.status == GameStatus.playing;
+    final isWon = state.status == GameStatus.won;
+    
+    Color bgColor = theme.colorScheme.surfaceContainerHighest;
+    Color fgColor = theme.colorScheme.onSurfaceVariant;
+    
+    if (!isPlaying) {
+      bgColor = isWon ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1);
+      fgColor = isWon ? Colors.green.shade700 : Colors.red.shade700;
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16.0),
+      ),
+      child: Center(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: Text(
+            state.feedback.isEmpty ? 'Ready for your first guess.' : state.feedback,
+            key: ValueKey('${state.feedback}_${state.guessCount}'),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: fgColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyHistoryState extends StatelessWidget {
+  const _EmptyHistoryState();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32.0),
+      child: Column(
+        children: [
+          Icon(
+            Icons.history, 
+            size: 48, 
+            color: theme.colorScheme.outline.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No guesses yet.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.outline,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your history will appear here.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuessHistoryList extends StatelessWidget {
+  final List<String> history;
+  const _GuessHistoryList({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    // Reverse history to show latest guess at the top of the list
+    final reversedHistory = history.reversed.toList();
+    final theme = Theme.of(context);
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: reversedHistory.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final guess = reversedHistory[index];
+        final attemptNumber = history.length - index;
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12.0),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.shadow.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              )
+            ]
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                foregroundColor: theme.colorScheme.onSurfaceVariant,
+                child: Text(
+                  '$attemptNumber', 
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  guess,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 4.0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HeartsDisplay extends StatelessWidget {
+  final int attemptsRemaining;
+  final int maxAttempts;
+
+  const _HeartsDisplay({required this.attemptsRemaining, required this.maxAttempts});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(maxAttempts, (index) {
+        final isFull = index < attemptsRemaining;
+        return Padding(
+          padding: const EdgeInsets.only(left: 4.0),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+            child: Icon(
+              isFull ? Icons.favorite : Icons.favorite_border,
+              key: ValueKey(isFull),
+              color: isFull ? Colors.red : Colors.grey.shade400,
+              size: 24, // Sized down to cleanly fit the new Attempts header
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// SHARED WIDGETS
+// -----------------------------------------------------------------------------
+
+class _PageIndicator extends StatelessWidget {
+  final PageController pageController;
+
+  const _PageIndicator({required this.pageController});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: pageController,
+      builder: (context, child) {
+        final page = pageController.hasClients ? (pageController.page ?? 0.0) : 0.0;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildDot(context, page, 0),
+            const SizedBox(width: 8),
+            _buildDot(context, page, 1),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDot(BuildContext context, double currentPage, int index) {
+    final isActive = (currentPage.round() == index);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: isActive ? 24 : 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: isActive ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(4),
       ),
     );
   }
