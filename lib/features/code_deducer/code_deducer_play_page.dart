@@ -3,9 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../shared/widgets/dialog_stat_row.dart';
+import '../../shared/widgets/heart_indicator.dart';
+import '../../shared/widgets/page_indicator.dart';
+import '../../shared/widgets/primary_button.dart';
+import '../../shared/widgets/status_chip.dart';
 import 'constants/game_constants.dart';
-import 'models/clue.dart';
 import 'providers/code_deducer_provider.dart';
+import 'widgets/clue_card.dart';
+import 'widgets/empty_history_state.dart';
+import 'widgets/feedback_banner.dart';
+import 'widgets/guess_history_card.dart';
 
 class CodeDeducerPlayPage extends ConsumerStatefulWidget {
   const CodeDeducerPlayPage({super.key});
@@ -79,14 +87,14 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  _DialogStatRow(label: 'Difficulty', value: state.selectedDifficulty.name.toUpperCase()),
-                  _DialogStatRow(label: 'Code Length', value: '${state.selectedCodeLength} Digits'),
-                  _DialogStatRow(label: 'Attempts Used', value: '${state.attemptsUsed}/${CodeDeducerConstants.maxAttempts}'),
-                  if (isWin) _DialogStatRow(label: 'Attempts Remaining', value: '${state.attemptsRemaining}'),
-                  _DialogStatRow(label: 'Completion Time', value: _formatTime(state.completionTime)),
+                  DialogStatRow(label: 'Difficulty', value: state.selectedDifficulty.name.toUpperCase()),
+                  DialogStatRow(label: 'Code Length', value: '${state.selectedCodeLength} Digits'),
+                  DialogStatRow(label: 'Attempts Used', value: '${state.attemptsUsed}/${CodeDeducerConstants.maxAttempts}'),
+                  if (isWin) DialogStatRow(label: 'Attempts Remaining', value: '${state.attemptsRemaining}'),
+                  DialogStatRow(label: 'Completion Time', value: _formatTime(state.completionTime)),
                   if (isWin) ...[
                     const Divider(height: 24),
-                    _DialogStatRow(
+                    DialogStatRow(
                       label: 'XP Earned',
                       value: '+${state.earnedXp}',
                       valueColor: Colors.green,
@@ -193,16 +201,12 @@ class _GameBoardContent extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(bottom: 24.0, top: 12.0),
-          child: _PageIndicator(pageController: pageController),
+          child: PageIndicator(pageController: pageController),
         ),
       ],
     );
   }
 }
-
-// -----------------------------------------------------------------------------
-// CLUES PAGE (Preserved from Phase 2)
-// -----------------------------------------------------------------------------
 
 class _CluesPage extends StatelessWidget {
   final CodeDeducerState state;
@@ -221,28 +225,16 @@ class _CluesPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Chip(
-                label: Text(state.selectedDifficulty.name.toUpperCase()),
+              StatusChip(
+                label: state.selectedDifficulty.name.toUpperCase(),
                 backgroundColor: theme.colorScheme.primaryContainer,
-                labelStyle: TextStyle(
-                  color: theme.colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  letterSpacing: 1.0,
-                ),
-                side: BorderSide.none,
+                textColor: theme.colorScheme.onPrimaryContainer,
               ),
               const SizedBox(width: 12),
-              Chip(
-                label: Text('${state.selectedCodeLength} DIGITS'),
+              StatusChip(
+                label: '${state.selectedCodeLength} DIGITS',
                 backgroundColor: theme.colorScheme.secondaryContainer,
-                labelStyle: TextStyle(
-                  color: theme.colorScheme.onSecondaryContainer,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  letterSpacing: 1.0,
-                ),
-                side: BorderSide.none,
+                textColor: theme.colorScheme.onSecondaryContainer,
               ),
             ],
           ),
@@ -265,7 +257,7 @@ class _CluesPage extends StatelessWidget {
               final clue = state.puzzle!.clues[index];
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
-                child: _StaggeredClueCard(clue: clue, index: index),
+                child: ClueCard(clue: clue, index: index),
               );
             },
           ),
@@ -275,89 +267,6 @@ class _CluesPage extends StatelessWidget {
     );
   }
 }
-
-class _StaggeredClueCard extends StatelessWidget {
-  final Clue clue;
-  final int index;
-
-  const _StaggeredClueCard({required this.clue, required this.index});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(clue.guess),
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (index * 100)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value.clamp(0.0, 1.0),
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16.0),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.shadow.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: theme.colorScheme.shadow.withValues(alpha: 0.02),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-        ),
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Text(
-                clue.guess,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 4.0,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: Text(
-                clue.type.description,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// GUESS PAGE (Redesigned for Phase 3)
-// -----------------------------------------------------------------------------
 
 class _GuessPage extends ConsumerWidget {
   final CodeDeducerState state;
@@ -374,7 +283,11 @@ class _GuessPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _FeedbackBanner(state: state),
+          FeedbackBanner(
+            status: state.status,
+            feedback: state.feedback,
+            guessCount: state.guessCount,
+          ),
           const SizedBox(height: 32),
           
           TextField(
@@ -416,22 +329,17 @@ class _GuessPage extends ConsumerWidget {
               final isPlaying = state.status == GameStatus.playing;
               final canSubmit = isValidLength && isPlaying;
 
-              return ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(64),
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: canSubmit ? 4 : 0,
-                ),
-                onPressed: canSubmit ? () {
-                  HapticFeedback.mediumImpact();
-                  final guess = textController.text.trim();
-                  ref.read(codeDeducerProvider.notifier).submitGuess(guess);
-                  textController.clear();
-                  FocusScope.of(context).unfocus();
-                } : null,
-                child: const Text('SUBMIT GUESS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+              return PrimaryButton(
+                text: 'SUBMIT GUESS',
+                onPressed: canSubmit 
+                  ? () {
+                      HapticFeedback.mediumImpact();
+                      final guess = textController.text.trim();
+                      ref.read(codeDeducerProvider.notifier).submitGuess(guess);
+                      textController.clear();
+                      FocusScope.of(context).unfocus();
+                    } 
+                  : null,
               );
             },
           ),
@@ -449,7 +357,7 @@ class _GuessPage extends ConsumerWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-              _HeartsDisplay(
+              HeartIndicator(
                 attemptsRemaining: state.attemptsRemaining, 
                 maxAttempts: CodeDeducerConstants.maxAttempts
               ),
@@ -458,90 +366,11 @@ class _GuessPage extends ConsumerWidget {
           const Divider(height: 32),
 
           if (state.guessHistory.isEmpty)
-            const _EmptyHistoryState()
+            const EmptyHistoryState()
           else
             _GuessHistoryList(history: state.guessHistory),
             
           const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeedbackBanner extends StatelessWidget {
-  final CodeDeducerState state;
-  const _FeedbackBanner({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isPlaying = state.status == GameStatus.playing;
-    final isWon = state.status == GameStatus.won;
-    
-    Color bgColor = theme.colorScheme.surfaceContainerHighest;
-    Color fgColor = theme.colorScheme.onSurfaceVariant;
-    
-    if (!isPlaying) {
-      bgColor = isWon ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1);
-      fgColor = isWon ? Colors.green.shade700 : Colors.red.shade700;
-    }
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Center(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: Text(
-            state.feedback.isEmpty ? 'Ready for your first guess.' : state.feedback,
-            key: ValueKey('${state.feedback}_${state.guessCount}'),
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: fgColor,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyHistoryState extends StatelessWidget {
-  const _EmptyHistoryState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32.0),
-      child: Column(
-        children: [
-          Icon(
-            Icons.history, 
-            size: 48, 
-            color: theme.colorScheme.outline.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No guesses yet.',
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.outline,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your history will appear here.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline.withValues(alpha: 0.8),
-            ),
-          ),
         ],
       ),
     );
@@ -556,7 +385,6 @@ class _GuessHistoryList extends StatelessWidget {
   Widget build(BuildContext context) {
     // Reverse history to show latest guess at the top of the list
     final reversedHistory = history.reversed.toList();
-    final theme = Theme.of(context);
 
     return ListView.separated(
       shrinkWrap: true,
@@ -566,151 +394,11 @@ class _GuessHistoryList extends StatelessWidget {
       itemBuilder: (context, index) {
         final guess = reversedHistory[index];
         final attemptNumber = history.length - index;
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12.0),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: theme.colorScheme.shadow.withValues(alpha: 0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              )
-            ]
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                foregroundColor: theme.colorScheme.onSurfaceVariant,
-                child: Text(
-                  '$attemptNumber', 
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  guess,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 4.0,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        return GuessHistoryCard(
+          guess: guess, 
+          attemptNumber: attemptNumber,
         );
       },
-    );
-  }
-}
-
-class _HeartsDisplay extends StatelessWidget {
-  final int attemptsRemaining;
-  final int maxAttempts;
-
-  const _HeartsDisplay({required this.attemptsRemaining, required this.maxAttempts});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(maxAttempts, (index) {
-        final isFull = index < attemptsRemaining;
-        return Padding(
-          padding: const EdgeInsets.only(left: 4.0),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-            child: Icon(
-              isFull ? Icons.favorite : Icons.favorite_border,
-              key: ValueKey(isFull),
-              color: isFull ? Colors.red : Colors.grey.shade400,
-              size: 24, // Sized down to cleanly fit the new Attempts header
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// SHARED WIDGETS
-// -----------------------------------------------------------------------------
-
-class _PageIndicator extends StatelessWidget {
-  final PageController pageController;
-
-  const _PageIndicator({required this.pageController});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: pageController,
-      builder: (context, child) {
-        final page = pageController.hasClients ? (pageController.page ?? 0.0) : 0.0;
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildDot(context, page, 0),
-            const SizedBox(width: 8),
-            _buildDot(context, page, 1),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDot(BuildContext context, double currentPage, int index) {
-    final isActive = (currentPage.round() == index);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: isActive ? 24 : 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: isActive ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-}
-
-class _DialogStatRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-  final bool isBold;
-
-  const _DialogStatRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.isBold = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: valueColor,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
