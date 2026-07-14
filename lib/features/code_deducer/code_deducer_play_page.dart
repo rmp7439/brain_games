@@ -207,31 +207,65 @@ class _CluesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'STUDY THE CLUES',
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Chip(
+                label: Text(state.selectedDifficulty.name.toUpperCase()),
+                backgroundColor: theme.colorScheme.primaryContainer,
+                labelStyle: TextStyle(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  letterSpacing: 1.0,
+                ),
+                side: BorderSide.none,
+              ),
+              const SizedBox(width: 12),
+              Chip(
+                label: Text('${state.selectedCodeLength} DIGITS'),
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                labelStyle: TextStyle(
+                  color: theme.colorScheme.onSecondaryContainer,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  letterSpacing: 1.0,
+                ),
+                side: BorderSide.none,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Every clue is true.\nUse logic to uncover the secret code.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-              color: Colors.grey,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 48),
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: state.puzzle!.clues.length,
             itemBuilder: (context, index) {
               final clue = state.puzzle!.clues[index];
-              return _StaggeredClueCard(clue: clue, index: index);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _StaggeredClueCard(clue: clue, index: index),
+              );
             },
           ),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -421,6 +455,8 @@ class _StaggeredClueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return TweenAnimationBuilder<double>(
       key: ValueKey(clue.guess),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -435,18 +471,55 @@ class _StaggeredClueCard extends StatelessWidget {
           ),
         );
       },
-      child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 4.0),
-        child: ListTile(
-          leading: Text(
-            clue.guess,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16.0),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.shadow.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
+            BoxShadow(
+              color: theme.colorScheme.shadow.withValues(alpha: 0.02),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
-          title: Text(clue.type.description),
+        ),
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Text(
+                clue.guess,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 4.0,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Text(
+                clue.type.description,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
