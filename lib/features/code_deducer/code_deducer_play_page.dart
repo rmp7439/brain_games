@@ -90,6 +90,7 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(codeDeducerProvider);
+    final theme = Theme.of(context);
 
     ref.listen<CodeDeducerState>(codeDeducerProvider, (previous, next) {
       if (previous?.status == GameStatus.playing && next.status == GameStatus.won) {
@@ -101,13 +102,23 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Code Deducer', style: TextStyle(fontSize: 18)),
+            Text(
+              'Code Deducer', 
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
             Text(
               '${state.selectedDifficulty.name.toUpperCase()} • ${state.selectedCodeLength} DIGITS',
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                letterSpacing: 1.0,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -194,50 +205,55 @@ class _CluesPage extends StatelessWidget {
     
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              StatusChip(
-                label: state.selectedDifficulty.name.toUpperCase(),
-                backgroundColor: theme.colorScheme.primaryContainer,
-                textColor: theme.colorScheme.onPrimaryContainer,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  StatusChip(
+                    label: state.selectedDifficulty.name.toUpperCase(),
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    textColor: theme.colorScheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(width: 12),
+                  StatusChip(
+                    label: '${state.selectedCodeLength} DIGITS',
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    textColor: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              StatusChip(
-                label: '${state.selectedCodeLength} DIGITS',
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                textColor: theme.colorScheme.onSecondaryContainer,
+              const SizedBox(height: 32),
+              Text(
+                'Every clue is true.\nUse logic to uncover the secret code.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
+              const SizedBox(height: 48),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: state.puzzle!.clues.length,
+                itemBuilder: (context, index) {
+                  final clue = state.puzzle!.clues[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: ClueCard(clue: clue, index: index),
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
             ],
           ),
-          const SizedBox(height: 32),
-          Text(
-            'Every clue is true.\nUse logic to uncover the secret code.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 48),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: state.puzzle!.clues.length,
-            itemBuilder: (context, index) {
-              final clue = state.puzzle!.clues[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: ClueCard(clue: clue, index: index),
-              );
-            },
-          ),
-          const SizedBox(height: 32),
-        ],
+        ),
       ),
     );
   }
@@ -255,98 +271,103 @@ class _GuessPage extends ConsumerWidget {
     
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FeedbackBanner(
-            status: state.status,
-            feedback: state.feedback,
-            guessCount: state.guessCount,
-          ),
-          const SizedBox(height: 32),
-          
-          TextField(
-            controller: textController,
-            keyboardType: TextInputType.number,
-            maxLength: state.puzzle!.codeLength,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 8.0,
-            ),
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: 'ENTER ${state.puzzle!.codeLength} DIGITS',
-              labelStyle: const TextStyle(letterSpacing: 2.0),
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-              counterText: '', 
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: theme.colorScheme.primary, 
-                  width: 2,
-                ),
-              ),
-            ),
-            enabled: state.status == GameStatus.playing,
-          ),
-          const SizedBox(height: 24),
-          
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: textController,
-            builder: (context, value, child) {
-              final isValidLength = value.text.length == state.puzzle!.codeLength;
-              final isPlaying = state.status == GameStatus.playing;
-              final canSubmit = isValidLength && isPlaying;
-
-              return PrimaryButton(
-                text: 'SUBMIT GUESS',
-                onPressed: canSubmit 
-                  ? () {
-                      HapticFeedback.mediumImpact();
-                      final guess = textController.text.trim();
-                      ref.read(codeDeducerProvider.notifier).submitGuess(guess);
-                      textController.clear();
-                      FocusScope.of(context).unfocus();
-                    } 
-                  : null,
-              );
-            },
-          ),
-          const SizedBox(height: 48),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'ATTEMPTS',
-                style: theme.textTheme.labelLarge?.copyWith(
+              FeedbackBanner(
+                status: state.status,
+                feedback: state.feedback,
+                guessCount: state.guessCount,
+              ),
+              const SizedBox(height: 32),
+              
+              TextField(
+                controller: textController,
+                keyboardType: TextInputType.number,
+                maxLength: state.puzzle!.codeLength,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 8.0,
                 ),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'ENTER ${state.puzzle!.codeLength} DIGITS',
+                  labelStyle: const TextStyle(letterSpacing: 2.0),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  counterText: '', 
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: theme.colorScheme.primary, 
+                      width: 2,
+                    ),
+                  ),
+                ),
+                enabled: state.status == GameStatus.playing,
               ),
-              HeartIndicator(
-                attemptsRemaining: state.attemptsRemaining, 
-                maxAttempts: CodeDeducerConstants.maxAttempts
+              const SizedBox(height: 24),
+              
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: textController,
+                builder: (context, value, child) {
+                  final isValidLength = value.text.length == state.puzzle!.codeLength;
+                  final isPlaying = state.status == GameStatus.playing;
+                  final canSubmit = isValidLength && isPlaying;
+
+                  return PrimaryButton(
+                    text: 'SUBMIT GUESS',
+                    onPressed: canSubmit 
+                      ? () {
+                          HapticFeedback.mediumImpact();
+                          final guess = textController.text.trim();
+                          ref.read(codeDeducerProvider.notifier).submitGuess(guess);
+                          textController.clear();
+                          FocusScope.of(context).unfocus();
+                        } 
+                      : null,
+                  );
+                },
               ),
+              const SizedBox(height: 48),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'ATTEMPTS',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  HeartIndicator(
+                    attemptsRemaining: state.attemptsRemaining, 
+                    maxAttempts: CodeDeducerConstants.maxAttempts
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+
+              if (state.guessHistory.isEmpty)
+                const EmptyHistoryState()
+              else
+                _GuessHistoryList(history: state.guessHistory),
+                
+              const SizedBox(height: 32),
             ],
           ),
-          const Divider(height: 32),
-
-          if (state.guessHistory.isEmpty)
-            const EmptyHistoryState()
-          else
-            _GuessHistoryList(history: state.guessHistory),
-            
-          const SizedBox(height: 32),
-        ],
+        ),
       ),
     );
   }

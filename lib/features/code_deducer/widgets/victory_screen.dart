@@ -23,82 +23,85 @@ class VictoryScreen extends StatelessWidget {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(
-                  Icons.emoji_events, 
-                  size: 96, 
-                  color: Colors.amber.shade500,
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'CONGRATULATIONS!',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2.0,
-                    color: theme.colorScheme.primary,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(
+                    Icons.emoji_events, 
+                    size: 96, 
+                    color: Colors.amber.shade500,
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'You cracked the code.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  const SizedBox(height: 32),
+                  Text(
+                    'CONGRATULATIONS!',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2.0,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 48),
-                
-                _StatBox(
-                  label: 'SECRET CODE',
-                  value: state.puzzle?.secretCode ?? '',
-                  valueStyle: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 8.0,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                _XpBreakdownCard(state: state),
-                const SizedBox(height: 32),
-                
-                _LevelProgressSection(
-                  beforeXp: state.totalXpBefore, 
-                  afterXp: state.totalXpAfter,
-                ),
-                const SizedBox(height: 48),
-                
-                PrimaryButton(
-                  text: 'PLAY AGAIN',
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    context.pop(); 
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size.fromHeight(64),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    context.go('/home');
-                  },
-                  child: Text(
-                    'BACK TO HOME', 
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold, 
-                      letterSpacing: 1.5,
+                  const SizedBox(height: 12),
+                  Text(
+                    'You cracked the code.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
-                    )
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 48),
+                  
+                  _StatBox(
+                    label: 'SECRET CODE',
+                    value: state.puzzle?.secretCode ?? '',
+                    valueStyle: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 8.0,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  _XpBreakdownCard(state: state),
+                  const SizedBox(height: 32),
+                  
+                  _LevelProgressSection(
+                    beforeXp: state.totalXpBefore, 
+                    afterXp: state.totalXpAfter,
+                  ),
+                  const SizedBox(height: 48),
+                  
+                  PrimaryButton(
+                    text: 'PLAY AGAIN',
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.pop(); 
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size.fromHeight(64),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      context.go('/home');
+                    },
+                    child: Text(
+                      'BACK TO HOME', 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        letterSpacing: 1.5,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      )
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
