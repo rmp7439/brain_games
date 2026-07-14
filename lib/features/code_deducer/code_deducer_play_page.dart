@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../shared/widgets/dialog_stat_row.dart';
 import '../../shared/widgets/heart_indicator.dart';
 import '../../shared/widgets/page_indicator.dart';
 import '../../shared/widgets/primary_button.dart';
@@ -11,6 +10,7 @@ import '../../shared/widgets/status_chip.dart';
 import 'constants/game_constants.dart';
 import 'providers/code_deducer_provider.dart';
 import 'widgets/clue_card.dart';
+import 'widgets/defeat_screen.dart';
 import 'widgets/empty_history_state.dart';
 import 'widgets/feedback_banner.dart';
 import 'widgets/guess_history_card.dart';
@@ -41,67 +41,23 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
     super.dispose();
   }
 
-  String _formatTime(Duration? duration) {
-    if (duration == null) return '--:--';
-    final m = duration.inMinutes.toString().padLeft(2, '0');
-    final s = (duration.inSeconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  void _showLossDialog(CodeDeducerState state) {
+  void _showDefeatScreen(CodeDeducerState state) {
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
-      transitionDuration: const Duration(milliseconds: 350),
-      pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
+      barrierColor: Theme.of(context).colorScheme.surface,
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) => DefeatScreen(state: state),
       transitionBuilder: (context, anim1, anim2, child) {
-        return Transform.scale(
-          scale: Curves.easeOutBack.transform(anim1.value),
-          child: Opacity(
-            opacity: anim1.value,
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Row(
-                children: [
-                  Icon(Icons.videogame_asset_off, color: Colors.red, size: 28),
-                  SizedBox(width: 8),
-                  Text('Game Over', style: TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'The code was: ${state.puzzle?.secretCode}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  DialogStatRow(label: 'Difficulty', value: state.selectedDifficulty.name.toUpperCase()),
-                  DialogStatRow(label: 'Code Length', value: '${state.selectedCodeLength} Digits'),
-                  DialogStatRow(label: 'Attempts Used', value: '${state.attemptsUsed}/${CodeDeducerConstants.maxAttempts}'),
-                  DialogStatRow(label: 'Completion Time', value: _formatTime(state.completionTime)),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); 
-                    context.go('/home');
-                  },
-                  child: const Text('Back Home'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); 
-                    context.pop(); 
-                  },
-                  child: const Text('Play Again'),
-                ),
-              ],
-            ),
+        final curve = CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curve,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.05),
+              end: Offset.zero
+            ).animate(curve),
+            child: child,
           ),
         );
       },
@@ -112,7 +68,7 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Theme.of(context).colorScheme.surface, // Uses the app surface color to behave like a full screen
+      barrierColor: Theme.of(context).colorScheme.surface, 
       transitionDuration: const Duration(milliseconds: 400),
       pageBuilder: (context, anim1, anim2) => VictoryScreen(state: state),
       transitionBuilder: (context, anim1, anim2, child) {
@@ -139,7 +95,7 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
       if (previous?.status == GameStatus.playing && next.status == GameStatus.won) {
         _showVictoryScreen(next);
       } else if (previous?.status == GameStatus.playing && next.status == GameStatus.lost) {
-        _showLossDialog(next);
+        _showDefeatScreen(next);
       }
     });
 
