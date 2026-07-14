@@ -27,8 +27,8 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
 
   @override
   void dispose() {
-    _textController.dispose();
     _pageController.dispose();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -43,7 +43,7 @@ class _CodeDeducerPlayPageState extends ConsumerState<CodeDeducerPlayPage> {
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha : 0.6),
+      barrierColor: Colors.black.withValues(alpha: 0.6),
       transitionDuration: const Duration(milliseconds: 350),
       pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (context, anim1, anim2, child) {
@@ -231,15 +231,6 @@ class _CluesPage extends StatelessWidget {
               final clue = state.puzzle!.clues[index];
               return _StaggeredClueCard(clue: clue, index: index);
             },
-          ),
-          const SizedBox(height: 32),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Swipe for Guess Page', style: TextStyle(color: Colors.grey, fontSize: 14)),
-              SizedBox(width: 8),
-              Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
-            ],
           ),
         ],
       ),

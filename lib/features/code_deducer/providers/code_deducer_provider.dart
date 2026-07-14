@@ -22,8 +22,7 @@ class CodeDeducerState {
   final DateTime? endTime;
   final int earnedXp;
   
-  // ADDED: Track previous guesses for the new UI flow
-  final List<String> guessHistory;
+  final List<String> guessHistory; // ADDED: Tracks previous guesses for the UI
 
   const CodeDeducerState({
     this.puzzle,
@@ -145,6 +144,8 @@ class CodeDeducerNotifier extends StateNotifier<CodeDeducerState> {
     if (cleanGuess.length != puzzle.codeLength) return;
 
     final currentAttempt = state.attemptsUsed + 1;
+    
+    // Create updated history list
     final newGuessHistory = List<String>.from(state.guessHistory)..add(cleanGuess);
 
     if (cleanGuess == puzzle.secretCode) {
